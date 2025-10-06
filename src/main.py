@@ -1,6 +1,6 @@
 import pandas as pd
 import io
-from sqlalchemy import create_engine, Column, String, Float, DateTime, select
+from sqlalchemy import create_engine, Column, String, text, Float, DateTime, select
 from sqlalchemy.orm import declarative_base, Session
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import insert # Key for ON CONFLICT
@@ -49,12 +49,12 @@ def clean_sensor_id(sensor_value: str) -> str:
 def create_hypertable(engine):
     """Converts the 'sensor_data' table into a TimescaleDB hypertable."""
     # This SQL command tells TimescaleDB to manage the table as a time-series hypertable.
-    sql = f"""
+    sql = text(f"""
     SELECT create_hypertable('{SensorData.__tablename__}', 'timestamp', 
                              chunk_time_interval => interval '1 week', 
                              if_not_exists => TRUE,
                              migrate_data => TRUE);
-    """
+    """)
     with engine.connect() as connection:
         connection.execute(sql)
         connection.commit()
