@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     container_name: firestore-normalizer
-    restart: always
+    restart: on-failure
     volumes:
       - ./src:/app
     depends_on:
