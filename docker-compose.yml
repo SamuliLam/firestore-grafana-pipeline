@@ -1,0 +1,42 @@
+services:
+  # Python-script
+  normalizer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: firestore-normalizer
+    restart: always
+    volumes:
+      - ./src:/app
+    depends_on:
+      - timescaledb
+
+  # TimescaleDB database for normalized schema
+  timescaledb:
+    image: timescale/timescaledb:latest-pg17
+    container_name: timescaledb
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=sensor_data
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - timescaledb
+
+# Persistent volume for db
+volumes:
+  timescale_data:
