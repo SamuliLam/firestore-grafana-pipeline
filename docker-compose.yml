@@ -5,11 +5,17 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     container_name: firestore-normalizer
-    restart: always
+    restart: on-failure
     volumes:
       - ./src:/app
     depends_on:
       - timescaledb
+    environment:
+      - DB_HOST=timescaledb
+      - DB_port=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=sensor_data
 
   # TimescaleDB database for normalized schema
   timescaledb:
