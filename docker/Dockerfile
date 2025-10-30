@@ -6,7 +6,6 @@ COPY docker/requirements.txt .
 
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-COPY ../src /app
+COPY src/ .
 
-#TODO: csv_to_sql.py with final version that uses firestore as datasource
-CMD ["python", "main.py"]
+CMD ["python", "history_to_timescale.py"]

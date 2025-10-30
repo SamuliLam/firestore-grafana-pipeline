@@ -12,7 +12,7 @@ services:
       - timescaledb
     environment:
       - DB_HOST=timescaledb
-      - DB_port=5432
+      - DB_PORT=5432
       - DB_USER=admin
       - DB_PASSWORD=admin
       - DB_NAME=sensor_data
@@ -30,7 +30,25 @@ services:
     volumes:
       - timescale_data:/var/lib/postgresql/data
 
-  # Grafana
+
+  firestore_sync:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    depends_on:
+      - timescaledb
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/normalizer-sa.json
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=sensor_data
+    volumes:
+      - ./docker/secrets/normalizer-sa.json:/secrets/normalizer-sa.json:ro
+
+
+      # Grafana
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -42,6 +60,8 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - timescaledb
+
+
 
 # Persistent volume for db
 volumes:
