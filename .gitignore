@@ -50,3 +50,5 @@ htmlcov/
 *.bak
 *.swp
 *.tmp
+
+docker/secrets/

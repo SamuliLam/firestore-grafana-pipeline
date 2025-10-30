@@ -81,59 +81,17 @@ def get_db_engine(max_retries=10, delay=5) -> Optional[create_engine]:
                 return None
 
 
-def load_csv_to_orm():
-    """Reads the CSV, cleans the data, and loads them into the database using ON CONFLICT DO NOTHING."""
+def insert_sensor_rows(rows):
 
-    # 1. Connect to DB
     engine = get_db_engine()
     if engine is None:
         return
 
-    # 2. Setup Schema (Table and Hypertable)
-    # NOTE: It's important to run this every time in case the table was dropped/volume cleared.
     Base.metadata.create_all(engine)
     create_hypertable(engine)
 
-    # 3. Load Data
-    try:
-        # Use the file name from your project environment, not the analysis file name
-        df = pd.read_csv('kerabit_sensor_data.csv') 
-    except FileNotFoundError:
-        print("ERROR: 'kerabit_sensor_data.csv' not found. Ensure it's mounted correctly.")
-        return
-
-    # --- Data Preparation for Bulk Insert ---
-    # Apply cleaning to the 'sensor' column and rename it to 'sensor_id' to match the ORM model
-    df['sensor_id'] = df['sensor'].apply(clean_sensor_id)
-    
-    # Ensure timestamp is a datetime object
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    
-    # Select only the columns corresponding to the ORM model for insertion
-    data_to_insert = df[['timestamp', 'sensor_id', 'zone', 'location', 'temperature', 'humidity']]
-    
-    # Convert DataFrame to a list of dictionaries for efficient bulk insertion
-    records = data_to_insert.to_dict(orient='records')
-    
-    print(f"Preparing to insert {len(records)} records into the database...")
-
-    # 4. Perform Insert with Conflict Handling
-    
-    # Create the INSERT statement
-    insert_stmt = insert(SensorData.__table__).values(records)
-    
-    # Add the ON CONFLICT DO NOTHING clause using the primary key columns
-    on_conflict_stmt = insert_stmt.on_conflict_do_nothing(
-        index_elements=['timestamp', 'sensor_id']
-    )
-    
-    # Execute the statement
-    with engine.connect() as connection:
-        # Execute the bulk insert statement
-        connection.execute(on_conflict_stmt)
-        connection.commit()
-        print("Data loading complete. Duplicate records were skipped (ON CONFLICT DO NOTHING).")
-            
-
-if __name__ == "__main__":
-    load_csv_to_orm()
+    with Session(engine) as session:
+        for row in rows:
+            session.merge(row)
+        session.commit()
+        print(f"Tallennettu {len(rows)} riviä tietokantaan.")
