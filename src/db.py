@@ -79,6 +79,11 @@ def init_db():
     print("Database initialized and hypertable created (if not exists).")
 
 
+def clean_sensor_id(sensor_value: str) -> str:
+    """Removes curly braces and single quotes from the sensor string."""
+    return str(sensor_value).replace("{", "").replace("}", "").replace("'", "").strip()
+
+
 def insert_sensor_rows(rows: list):
     engine = get_engine()
     with Session(engine) as session:

@@ -3,6 +3,7 @@ import json
 from src.db import insert_sensor_rows, init_db
 from src.utils import normalize_sensor_data
 from contextlib import asynccontextmanager
+import datetime
 
 
 @asynccontextmanager
@@ -14,6 +15,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Normalizer-API", lifespan=lifespan)
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
 
 
 @app.post("/webhook")
@@ -30,15 +36,47 @@ async def firestore_webhook(request: Request):
         print("Received webhook")
         print(json.dumps(data, indent=2))
 
-        rows = normalize_sensor_data(data)
-        if rows:
-            insert_sensor_rows(rows)
+        sensor_rows = normalize_sensor_data(data)
 
-        return {"status": "ok", "inserted": len(rows)}
+        if not sensor_rows:
+            return {"status": "error", "message": "No valid sensor data found"}
+
+        # Insert into database
+        insert_sensor_rows(sensor_rows)
+
+        log_webhook(data, len(sensor_rows))
+
+        return {
+            "status": "success",
+            "rows_inserted": len(sensor_rows),
+            "message": f"Successfully stored {len(sensor_rows)} sensor readings"
+        }
 
     except Exception as e:
         print(f"Webhook erre: {e}")
         return {"error": str(e)}
+
+
+def log_webhook(data: dict, rows_count: int):
+    """Log webhook requests to a file for debugging."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_message = f"""
+{'=' * 80}
+TIMESTAMP: {timestamp}
+ROWS STORED: {rows_count}
+{'=' * 80}
+DATA:
+{json.dumps(data, indent=2)}
+{'=' * 80}
+
+"""
+
+    try:
+        with open("webhook_logs.txt", "a") as f:
+            f.write(log_message)
+        print(log_message)
+    except Exception as e:
+        print(f"Failed to write log: {str(e)}")
 
 
 if __name__ == "__main__":
