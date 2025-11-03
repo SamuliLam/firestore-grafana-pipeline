@@ -1,7 +1,7 @@
 from google.cloud import firestore
-from datetime import datetime
 import json
-from main import SensorData, insert_sensor_rows
+from src.db import insert_sensor_rows, get_oldest_timestamp_from_db
+from src.utils.normalizer import normalize_sensor_data
 
 # Firestore client
 CLIENT = firestore.Client(project="prj-mtp-jaak-leht-ufl")
@@ -14,38 +14,35 @@ def parse_firestore_document(doc_id: str, raw_data: dict):
     json_str = next(iter(raw_data.values()))
 
     try:
-        data_dict = json.loads(json_str)
+        data_as_dict = json.loads(json_str)
+        print(f"Data as a dict in the f-document: {data_as_dict}")
     except json.JSONDecodeError:
         print(f"Error: the document's {doc_id} data was not acceptable JSON.")
         return []
 
-    rows = []
-    for sensor_id, values in data_dict.items():
-        row = SensorData(
-            timestamp=datetime.strptime(doc_id, "%Y-%m-%d-%H:%M:%S"),
-            sensor_id=sensor_id,
-            zone=None,
-            location=None,
-            temperature=values.get("temperature", [None])[-1],
-            humidity=values.get("humidity", [None])[-1]
-        )
-        rows.append(row)
-
-    return rows
+    sensor_data = normalize_sensor_data(data_as_dict)
+    return sensor_data
 
 
 def sync_firestore_to_timescale():
+    oldest_ts = get_oldest_timestamp_from_db()
+
     for collection_name in COLLECTIONS:
-        print(f"\n Fetching data from Firestore-collection: {collection_name}")
-        docs = CLIENT.collection(collection_name).limit(10).stream()
+        #TODO remove comments when timestamp field gets added to sensor data
+        # if oldest_ts:
+        #     docs = CLIENT.collection(collection_name).where("timestamp", "<", oldest_ts).stream()
+        # else:
+        #     docs = CLIENT.collection(collection_name).stream()
+
+        docs = CLIENT.collection(collection_name).limit(20).stream()
 
         for doc in docs:
             rows = parse_firestore_document(doc.id, doc.to_dict())
-            if not rows:
-                continue
-
-            insert_sensor_rows(rows)
-            print(f"Saved ({len(rows)} rows) to document {doc.id}")
+            print("No data to insert! The document contained missing values.")
+            if rows:
+                print(f"sensordata to be inserted: {rows}")
+                insert_sensor_rows(rows)
+                print(f"Saved ({len(rows)} rows) to document {doc.id}")
 
     print("\n Synchronization done!")
 
