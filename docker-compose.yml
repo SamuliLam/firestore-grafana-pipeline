@@ -62,7 +62,16 @@ services:
     depends_on:
       - timescaledb
 
-
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok
+    command: http normalizer-api:8080
+    ports:
+      - "4040:4040"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    depends_on:
+      - normalizer-api
 
 # Persistent volume for db
 volumes:
