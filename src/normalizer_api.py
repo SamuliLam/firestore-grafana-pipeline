@@ -81,5 +81,27 @@ DATA:
 
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import subprocess
+    import time
+    
+    print("Starting FastAPI server...")
+    server_process = subprocess.Popen([
+        'uvicorn', 'normalizer_api:app', '--host', '0.0.0.0', '--port', '8000', '--reload'
+    ])
+    
+    time.sleep(2)
+    
+    if server_process.poll() is not None:
+        print("ERROR: FastAPI server failed to start!")
+        exit(1)
+    
+    print("FastAPI server started!")
+    
+    try:
+        # Keep the server running
+        server_process.wait()
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        server_process.terminate()
+        server_process.wait()
+        print("Shutdown complete")
