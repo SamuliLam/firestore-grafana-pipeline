@@ -1,6 +1,7 @@
 import datetime
 from src.db import SensorData, clean_sensor_id
 from typing import List
+from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 
 def normalize_sensor_data(data: dict) -> List[SensorData]:
@@ -31,19 +32,18 @@ def normalize_sensor_data(data: dict) -> List[SensorData]:
     for item in data_list:
         try:
             # Extract and validate required fields
-            timestamp_str = item.get("timestamp")
+            f_timestamp = item.get("timestamp")
             sensor_id = item.get("sensor_id")
 
-            if not timestamp_str or not sensor_id:
+            if not f_timestamp or not sensor_id:
                 print(f"Skipping item: missing timestamp or sensor_id - {item}")
                 continue
 
             # Parse timestamp
-            try:
-                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-            except ValueError:
-                # Try alternative format
-                timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+            if isinstance(f_timestamp, DatetimeWithNanoseconds):
+                timestamp = f_timestamp.replace(tzinfo=None)
+            else:
+                timestamp = datetime.datetime.now(datetime.UTC)
 
             # Clean sensor ID
             sensor_id = clean_sensor_id(sensor_id)
@@ -54,8 +54,8 @@ def normalize_sensor_data(data: dict) -> List[SensorData]:
                 sensor_id=sensor_id,
                 zone=item.get("zone", ""),
                 location=item.get("location", ""),
-                temperature=float(item.get("temperature")) if item.get("temperature") else None,
-                humidity=float(item.get("humidity")) if item.get("humidity") else None
+                temperature=float(round(item.get("temperature"), 2)) if item.get("temperature") else None,
+                humidity=float(round(item.get("humidity"), 2)) if item.get("humidity") else None
             )
 
             rows.append(sensor_row)
