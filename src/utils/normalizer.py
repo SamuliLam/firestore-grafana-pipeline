@@ -4,7 +4,7 @@ from typing import List
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 
-def normalize_sensor_data(data: dict) -> List[SensorData]:
+def normalize_sensor_data(data: dict, sensor_id) -> List[SensorData]:
     """
     Parse incoming JSON data into SensorData objects.
 
@@ -33,10 +33,12 @@ def normalize_sensor_data(data: dict) -> List[SensorData]:
         try:
             # Extract and validate required fields
             f_timestamp = item.get("timestamp")
-            sensor_id = item.get("sensor_id")
+
+            if not sensor_id:
+                sensor_id = item.get("sensor_id")
 
             if not f_timestamp or not sensor_id:
-                print(f"Skipping item: missing timestamp or sensor_id - {item}")
+                print(f"Skipping item: missing timestamp or sensor id - {item}")
                 continue
 
             # Parse timestamp
@@ -54,8 +56,8 @@ def normalize_sensor_data(data: dict) -> List[SensorData]:
                 sensor_id=sensor_id,
                 zone=item.get("zone", ""),
                 location=item.get("location", ""),
-                temperature=float(round(item.get("temperature"), 2)) if item.get("temperature") else None,
-                humidity=float(round(item.get("humidity"), 2)) if item.get("humidity") else None
+                temperature=round(float(item.get("temperature")), 2) if item.get("temperature") else None,
+                humidity=round(float(item.get("humidity")), 2) if item.get("humidity") else None
             )
 
             rows.append(sensor_row)
