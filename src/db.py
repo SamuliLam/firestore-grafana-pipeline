@@ -73,13 +73,21 @@ def clean_sensor_id(sensor_value: str) -> str:
     return str(sensor_value).replace("{", "").replace("}", "").replace("'", "").strip()
 
 def insert_sensor_rows(rows: list):
-    for row in rows:
-        if hasattr(row, "__dict__"):
-            data = {k: v for k, v in row.__dict__.items() if not k.startswith("_")}
-        else:
-            data = row
-        process_and_insert_sensor_data(data)
-
+    """Insert sensor data rows directly into the database."""
+    engine = get_engine()
+    
+    with Session(engine) as session:
+        for row in rows:
+            # Convert row object to SensorData instance if needed
+            if isinstance(row, SensorData):
+                session.merge(row)
+            else:
+                # If row is a dict, create a SensorData instance
+                sensor_data = SensorData(**row)
+                session.merge(sensor_data)
+        
+        session.commit()
+        print(f"Saved {len(rows)} rows to database.")
 
 def get_oldest_timestamp_from_db() -> Optional[datetime]:
     engine = get_engine()
