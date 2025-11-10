@@ -5,7 +5,6 @@ from src.utils import normalize_sensor_data
 from contextlib import asynccontextmanager
 import datetime
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -13,14 +12,11 @@ async def lifespan(app: FastAPI):
     yield
     print("Application shutting down")
 
-
 app = FastAPI(title="Normalizer-API", lifespan=lifespan)
-
 
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
-
 
 @app.post("/webhook")
 async def firestore_webhook(request: Request):
@@ -56,10 +52,9 @@ async def firestore_webhook(request: Request):
         print(f"Webhook erre: {e}")
         return {"error": str(e)}
 
-
 def log_webhook(data: dict, rows_count: int):
     """Log webhook requests to a file for debugging."""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_message = f"""
 {'=' * 80}
 TIMESTAMP: {timestamp}
@@ -68,9 +63,7 @@ ROWS STORED: {rows_count}
 DATA:
 {json.dumps(data, indent=2)}
 {'=' * 80}
-
 """
-
     try:
         with open("webhook_logs.txt", "a") as f:
             f.write(log_message)
@@ -78,25 +71,20 @@ DATA:
     except Exception as e:
         print(f"Failed to write log: {str(e)}")
 
-
 if __name__ == "__main__":
     import uvicorn
     import subprocess
     import time
-    
+
     print("Starting FastAPI server...")
     server_process = subprocess.Popen([
         'uvicorn', 'normalizer_api:app', '--host', '0.0.0.0', '--port', '8000', '--reload'
     ])
-    
     time.sleep(2)
-    
     if server_process.poll() is not None:
         print("ERROR: FastAPI server failed to start!")
         exit(1)
-    
     print("FastAPI server started!")
-    
     try:
         # Keep the server running
         server_process.wait()

@@ -1,12 +1,15 @@
-import pandas as pd
-import io
-from sqlalchemy import create_engine, Column, String, text, Float, DateTime, select
+# src/db.py
+import time
+import traceback
+from datetime import datetime
+from typing import Optional, Dict, Any, List
+
+from sqlalchemy import (
+    create_engine, text, Column, String, Float, DateTime, Text
+)
 from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.exc import OperationalError
-from datetime import datetime
-from sqlalchemy.dialects.postgresql import insert  # Key for ON CONFLICT
-import time
-from typing import Optional
+from sqlalchemy.dialects.postgresql import insert
 
 DB_HOST = "timescaledb"
 DB_PORT = "5432"
@@ -15,36 +18,24 @@ DB_PASSWORD = "admin"
 DB_NAME = "sensor_data"
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
-# Base class for declarative table mapping
 Base = declarative_base()
-
-
-class SensorData(Base):
-    """
-    SQLAlchemy ORM Model representing the 'sensor_data' table.
-    """
-    __tablename__ = 'sensor_data'
-
-    # TimescaleDB requires a timestamp column which acts as the PRIMARY KEY
-    timestamp = Column(DateTime, primary_key=True, nullable=False)
-
-    # Sensor ID acts as the space dimension in a TimescaleDB hypertable
-    sensor_id = Column(String(50), primary_key=True, nullable=False)
-
-    # Geographical data usually "Zone 2" or "Bottom"
-    zone = Column(String(20))
-    location = Column(String(20))
-
-    temperature = Column(Float)  # eg. 24.34
-    humidity = Column(Float)  # eg. 67 %
-
-
-# Singleton engine
 ENGINE: Optional[create_engine] = None
 
 
+class SensorData(Base):
+    """EAV-style sensor data table"""
+    __tablename__ = "sensor_data"
+
+    timestamp = Column(DateTime, primary_key=True, nullable=False)
+    sensor_id = Column(String(50), primary_key=True, nullable=False)
+    metric_name = Column(String(100), primary_key=True, nullable=False)
+    metric_value = Column(Text, nullable=False)
+    source = Column(String(50)) # esim viherpysäkki tai ympäristömoduuli
+
+# Database Functions
+
 def get_engine(max_retries=10, delay=5):
+    """Create or reuse DB engine with retry logic."""
     global ENGINE
     if ENGINE is not None:
         return ENGINE
@@ -53,7 +44,7 @@ def get_engine(max_retries=10, delay=5):
         try:
             ENGINE = create_engine(DATABASE_URL)
             ENGINE.connect()
-            print("Successfully connected to TimescaleDB.")
+            print("Connected to TimescaleDB.")
             return ENGINE
         except OperationalError as e:
             print(f"Connection attempt {attempt + 1} failed: {e}")
@@ -62,12 +53,10 @@ def get_engine(max_retries=10, delay=5):
 
 
 def init_db():
-    """
-    Kutsutaan sovelluksen startupissa.
-    Luo tarvittavat taulut ja hypertablen.
-    """
+    """Initialize table and hypertable."""
     engine = get_engine()
     Base.metadata.create_all(engine)
+
     with engine.connect() as conn:
         conn.execute(text(f"""
             SELECT create_hypertable('{SensorData.__tablename__}', 'timestamp',
@@ -76,22 +65,29 @@ def init_db():
                                      migrate_data => TRUE);
         """))
         conn.commit()
-    print("Database initialized and hypertable created (if not exists).")
+
+    print("Database initialized with sensor_data.")
 
 
 def clean_sensor_id(sensor_value: str) -> str:
-    """Removes curly braces and single quotes from the sensor string."""
     return str(sensor_value).replace("{", "").replace("}", "").replace("'", "").strip()
 
-
 def insert_sensor_rows(rows: list):
+    """Insert sensor data rows directly into the database."""
     engine = get_engine()
+    
     with Session(engine) as session:
         for row in rows:
-            session.merge(row)  # Upsert
+            # Convert row object to SensorData instance if needed
+            if isinstance(row, SensorData):
+                session.merge(row)
+            else:
+                # If row is a dict, create a SensorData instance
+                sensor_data = SensorData(**row)
+                session.merge(sensor_data)
+        
         session.commit()
         print(f"Saved {len(rows)} rows to database.")
-
 
 def get_oldest_timestamp_from_db() -> Optional[datetime]:
     engine = get_engine()
