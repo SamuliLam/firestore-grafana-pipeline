@@ -2,7 +2,6 @@ import datetime
 from typing import List
 from src.db import SensorData, clean_sensor_id
 
-def normalize_sensor_data(data: dict, sensor_id=None) -> List[SensorData]:
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 
