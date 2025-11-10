@@ -1,8 +1,10 @@
 import datetime
 from typing import List
-from src.db import SensorData, clean_sensor_id
-
+from src.db import SensorData
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
+
+SENSOR_READINGS_INFO_FIELDS = ("sensor_id", "timestamp", "sensor_type",
+                               "location", "zone", "battery_voltage", "Battery")
 
 
 def normalize_sensor_data(data: dict, sensor_id) -> List[SensorData]:
@@ -20,46 +22,50 @@ def normalize_sensor_data(data: dict, sensor_id) -> List[SensorData]:
     }
     """
     rows = []
-    
+
     # Handle both single object and array of objects
     data_list = data if isinstance(data, list) else [data]
-    
+
     for item in data_list:
+        metrics = {k: v for k, v in item.items() if k not in SENSOR_READINGS_INFO_FIELDS}
+
+        # Extract and validate required fields
+        f_timestamp = item.get("timestamp")
+        sensor_type = item.get("sensor_type")
+        s_id = sensor_id or item.get("sensor_id")
+
+        # if not f_timestamp or not s_id:
+        #     print(f"Skipping item: missing timestamp or sensor id - {item}")
+        #     continue
+
+        # Parse timestamp
+        if not f_timestamp:
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
+        elif isinstance(f_timestamp, DatetimeWithNanoseconds):
+            timestamp = f_timestamp.replace(tzinfo=None)
+        else:
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
+
         try:
-            # Extract and validate required fields
-            f_timestamp = item.get("timestamp")
+            for metric_name, metric_value in metrics.items():
 
-            if not sensor_id:
-                sensor_id = item.get("sensor_id")
+                try:
+                    value = round(float(metric_value), 2)
+                except (TypeError, ValueError):
+                    print(f"Invalid metric value for {metric_name}: {metric_value}")
+                    continue
 
-            if not f_timestamp or not sensor_id:
-                print(f"Skipping item: missing timestamp or sensor id - {item}")
-                continue
-            
-            # Parse timestamp
-            if isinstance(f_timestamp, DatetimeWithNanoseconds):
-                timestamp = f_timestamp.replace(tzinfo=None)
-            else:
-                timestamp = datetime.datetime.now(datetime.UTC)
-
-            # Clean sensor ID
-            sensor_id = clean_sensor_id(sensor_id)
-
-            # Create SensorData object
-            sensor_row = SensorData(
-                timestamp=timestamp,
-                sensor_id=sensor_id,
-                zone=item.get("zone", ""),
-                location=item.get("location", ""),
-                temperature=round(float(item.get("temperature")), 2) if item.get("temperature") else None,
-                humidity=round(float(item.get("humidity")), 2) if item.get("humidity") else None
-            )
-
-            rows.append(sensor_row)
-            print(f"Parsed sensor data: {sensor_id} @ {timestamp}")
-        
+                sensor_row = SensorData(
+                    timestamp=timestamp,
+                    sensor_id=s_id,
+                    metric_name=metric_name,
+                    metric_value=value,
+                    source=sensor_type
+                )
+                rows.append(sensor_row)
+                print(f"Parsed sensor data: {s_id} @ {timestamp}")
         except Exception as e:
             print(f"Error parsing sensor data item: {str(e)}")
             continue
-    
+
     return rows

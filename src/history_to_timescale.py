@@ -36,7 +36,7 @@ def sync_firestore_to_timescale():
         # else:
         #     docs = CLIENT.collection(collection_name).stream()
 
-        docs = CLIENT.collection(collection_name).limit(50).stream()
+        docs = CLIENT.collection(collection_name).limit(5).stream()
 
         for doc in docs:
             rows = parse_firestore_document(doc.to_dict())

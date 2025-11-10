@@ -69,9 +69,6 @@ def init_db():
     print("Database initialized with sensor_data.")
 
 
-def clean_sensor_id(sensor_value: str) -> str:
-    return str(sensor_value).replace("{", "").replace("}", "").replace("'", "").strip()
-
 def insert_sensor_rows(rows: list):
     """Insert sensor data rows directly into the database."""
     engine = get_engine()
