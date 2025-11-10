@@ -6,6 +6,8 @@ from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 SENSOR_READINGS_INFO_FIELDS = ("sensor_id", "timestamp", "sensor_type",
                                "location", "zone", "battery_voltage", "Battery")
 
+LIST_VALUE_INTERVAL_MINUTES = 5
+
 
 def normalize_sensor_data(data: dict, sensor_id) -> List[SensorData]:
     """
@@ -28,44 +30,82 @@ def normalize_sensor_data(data: dict, sensor_id) -> List[SensorData]:
 
     for item in data_list:
         metrics = {k: v for k, v in item.items() if k not in SENSOR_READINGS_INFO_FIELDS}
-
-        # Extract and validate required fields
-        f_timestamp = item.get("timestamp")
-        sensor_type = item.get("sensor_type")
-        s_id = sensor_id or item.get("sensor_id")
-
-        # if not f_timestamp or not s_id:
-        #     print(f"Skipping item: missing timestamp or sensor id - {item}")
-        #     continue
-
-        # Parse timestamp
-        if not f_timestamp:
-            timestamp = datetime.datetime.now(datetime.timezone.utc)
-        elif isinstance(f_timestamp, DatetimeWithNanoseconds):
-            timestamp = f_timestamp.replace(tzinfo=None)
-        else:
-            timestamp = datetime.datetime.now(datetime.timezone.utc)
-
-        try:
-            for metric_name, metric_value in metrics.items():
-
-                try:
-                    value = round(float(metric_value), 2)
-                except (TypeError, ValueError):
-                    print(f"Invalid metric value for {metric_name}: {metric_value}")
-                    continue
-
-                sensor_row = SensorData(
-                    timestamp=timestamp,
-                    sensor_id=s_id,
-                    metric_name=metric_name,
-                    metric_value=value,
-                    source=sensor_type
-                )
-                rows.append(sensor_row)
-                print(f"Parsed sensor data: {s_id} @ {timestamp}")
-        except Exception as e:
-            print(f"Error parsing sensor data item: {str(e)}")
-            continue
+        rows.extend(parse_sensor_item(item, metrics, sensor_id))
 
     return rows
+
+
+def parse_sensor_item(item: dict, metrics: dict, sensor_id: str) -> List[SensorData]:
+    sensor_type = item.get("sensor_type")
+    s_id = sensor_id or item.get("sensor_id")
+
+    base_time = parse_timestamp(item.get("timestamp"))
+
+    rows = []
+    for metric_name, metric_value in metrics.items():
+        if isinstance(metric_value, list):
+            rows.extend(
+                parse_list_metric(metric_name, metric_value, s_id, sensor_type, base_time)
+            )
+        else:
+            row = create_sensor_row(metric_name, metric_value, s_id, sensor_type, base_time)
+            if row:
+                rows.append(row)
+
+    if rows:
+        print(f"Parsed {len(rows)} metrics for sensor {s_id} starting {base_time}")
+    return rows
+
+
+def parse_timestamp(f_timestamp) -> datetime.datetime:
+    if not f_timestamp:
+        return datetime.datetime.now(datetime.timezone.utc)
+
+    if isinstance(f_timestamp, DatetimeWithNanoseconds):
+        return f_timestamp.replace(tzinfo=None)
+
+    if isinstance(f_timestamp, str):
+        try:
+            return datetime.datetime.fromisoformat(f_timestamp)
+        except ValueError:
+            pass
+
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
+def parse_list_metric(
+        metric_name: str,
+        metric_values: list,
+        sensor_id: str,
+        sensor_type: str,
+        base_time: datetime.datetime
+) -> List[SensorData]:
+    rows = []
+    for i, val in enumerate(metric_values):
+        ts = base_time + datetime.timedelta(minutes=LIST_VALUE_INTERVAL_MINUTES * i)
+        row = create_sensor_row(metric_name, val, sensor_id, sensor_type, ts)
+        if row:
+            rows.append(row)
+    return rows
+
+
+def create_sensor_row(
+        metric_name: str,
+        metric_value,
+        sensor_id: str,
+        sensor_type: str,
+        timestamp: datetime.datetime
+) -> SensorData | None:
+    try:
+        value = round(float(metric_value), 2)
+    except (TypeError, ValueError):
+        print(f"Invalid metric value for {metric_name}: {metric_value}")
+        return None
+
+    return SensorData(
+        timestamp=timestamp,
+        sensor_id=sensor_id,
+        metric_name=metric_name,
+        metric_value=value,
+        source=sensor_type
+    )
