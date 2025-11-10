@@ -1,6 +1,6 @@
 import datetime
-from src.db import SensorData, clean_sensor_id
 from typing import List
+from src.db import SensorData, clean_sensor_id
 
 def normalize_sensor_data(data: dict, sensor_id=None) -> List[SensorData]:
     """
@@ -34,10 +34,13 @@ def normalize_sensor_data(data: dict, sensor_id=None) -> List[SensorData]:
                 continue
             
             # Parse timestamp
-            if isinstance(f_timestamp, DatetimeWithNanoseconds):
-                timestamp = f_timestamp.replace(tzinfo=None)
+            if isinstance(f_timestamp, str):
+                try:
+                    timestamp = datetime.datetime.fromisoformat(f_timestamp)
+                except (ValueError, TypeError):
+                    timestamp = datetime.datetime.now()
             else:
-                timestamp = datetime.datetime.now(datetime.UTC)
+                timestamp = datetime.datetime.now()
             
             # Clean sensor ID
             sensor_id = clean_sensor_id(sensor_id)
@@ -53,16 +56,18 @@ def normalize_sensor_data(data: dict, sensor_id=None) -> List[SensorData]:
             # Create one SensorData row per metric
             for metric_name, metric_value in metrics.items():
                 if metric_value is not None:
-                    # Convert numeric values
+                    # Convert numeric values to float, keep strings as is
                     if isinstance(metric_value, (int, float)):
                         metric_value = round(float(metric_value), 2)
+                    else:
+                        metric_value = str(metric_value)
                     
                     sensor_row = SensorData(
                         timestamp=timestamp,
                         sensor_id=sensor_id,
                         metric_name=metric_name,
-                        metric_value=metric_value if isinstance(metric_value, (int, float)) else float('nan'),
-                        source="viherpysäkki"  # or extract from item if available
+                        metric_value=metric_value,
+                        source="viherpysäkki"
                     )
                     rows.append(sensor_row)
             

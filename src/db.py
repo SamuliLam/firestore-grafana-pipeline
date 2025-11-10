@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 from sqlalchemy import (
-    create_engine, Column, String, Float, DateTime, text
+    create_engine, text, Column, String, Float, DateTime, Text
 )
 from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.exc import OperationalError
@@ -29,7 +29,7 @@ class SensorData(Base):
     timestamp = Column(DateTime, primary_key=True, nullable=False)
     sensor_id = Column(String(50), primary_key=True, nullable=False)
     metric_name = Column(String(100), primary_key=True, nullable=False)
-    metric_value = Column(Float, nullable=False)
+    metric_value = Column(Text, nullable=False)
     source = Column(String(50)) # esim viherpysäkki tai ympäristömoduuli
 
 # Database Functions
