@@ -1,0 +1,28 @@
+apiVersion: 1
+
+datasources:
+  - name: TimescaleDB
+    type: postgres
+    access: proxy
+    url: timescaledb:5432
+    user: admin
+    secureJsonData:
+      password: admin
+    jsonData:
+      database: sensor_data
+      sslmode: "disable"
+      timescaledb: true
+    isDefault: true
+#datasources:
+#  - name: TimescaleDB
+#    type: postgres
+#    access: proxy
+#    url: timescaledb:5432
+#    user: admin
+#    database: sensor_data
+#    secureJsonData:
+#      password: admin
+#    jsonData:
+#      sslmode: "disable"
+#      timescaledb: true
+#    isDefault: true

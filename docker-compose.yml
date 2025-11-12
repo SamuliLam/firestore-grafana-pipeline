@@ -61,24 +61,25 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/Sensor_dashboard.json
     depends_on:
       timescaledb:
         condition: service_healthy
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
 
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: ngrok
-    command: http normalizer-api:8080
-    ports:
-      - "4040:4040"
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    depends_on:
-      - normalizer-api
+
+  #ngrok:
+  #  image: ngrok/ngrok:latest
+  #  container_name: ngrok
+  #  command: http normalizer-api:8080
+  #  ports:
+  #    - "4040:4040"
+  #  environment:
+  #    - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+  #  depends_on:
+  #    - normalizer-api
 
 # Persistent volume for db
 volumes:
