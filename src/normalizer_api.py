@@ -32,7 +32,7 @@ async def firestore_webhook(request: Request):
         print("Received webhook")
         print(json.dumps(data, indent=2))
 
-        sensor_rows = normalize_sensor_data(data)
+        sensor_rows = normalize_sensor_data(data, data.get("sensor_id"))
 
         if not sensor_rows:
             return {"status": "error", "message": "No valid sensor data found"}
