@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 0,
   "links": [],
   "panels": [
     {
@@ -62,8 +62,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 9,
+        "w": 13,
         "x": 0,
         "y": 0
       },
@@ -145,7 +145,25 @@
   "schemaVersion": 42,
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "DD42FA122ACD",
+          "value": "DD42FA122ACD"
+        },
+        "definition": "SELECT DISTINCT sensor_id FROM sensor_data ORDER BY sensor_id; ",
+        "description": "Finds a specific sensor with its ID",
+        "includeAll": true,
+        "label": "Choose sensor",
+        "name": "Sensor_id",
+        "options": [],
+        "query": "SELECT DISTINCT sensor_id FROM sensor_data ORDER BY sensor_id; ",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-6h",
@@ -153,7 +171,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Sensor dashboard",
-  "uid": "ad2p574",
-  "version": 1
+  "title": "Sensor dashboard Copy with variable",
+  "uid": "adfjcn8",
+  "version": 2
 }

@@ -82,7 +82,7 @@ def parse_list_metric(
 ) -> List[SensorData]:
     rows = []
     for i, val in enumerate(metric_values):
-        ts = base_time + datetime.timedelta(minutes=LIST_VALUE_INTERVAL_MINUTES * i)
+        ts = base_time - datetime.timedelta(minutes=LIST_VALUE_INTERVAL_MINUTES * i)
         row = create_sensor_row(metric_name, val, sensor_id, sensor_type, ts)
         if row:
             rows.append(row)
