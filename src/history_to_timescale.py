@@ -1,12 +1,12 @@
 from google.cloud import firestore
 import json
-from src.db import insert_sensor_rows, get_oldest_timestamp_from_db
+from src.db import insert_sensor_rows, get_oldest_timestamp_from_db, SensorData
 from src.utils.normalizer import normalize_sensor_data
 
 # Firestore client
 CLIENT = firestore.Client(project="prj-mtp-jaak-leht-ufl")
 
-# Firestore collections
+# Firestore collections to fetch history from
 COLLECTIONS = ["viherpysakki"]
 
 
@@ -42,7 +42,7 @@ def sync_firestore_to_timescale():
             rows = parse_firestore_document(doc.to_dict())
             if rows:
                 print(f"sensordata to be inserted: {rows}")
-                insert_sensor_rows(rows)
+                insert_sensor_rows(SensorData, rows)
                 print(f"Saved ({len(rows)} rows) to document {doc.id}")
 
     print("\n Synchronization done!")

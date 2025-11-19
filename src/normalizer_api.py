@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Request
 import json
-from src.db import insert_sensor_rows, init_db
+from src.db import insert_sensor_rows, init_db, SensorData
 from src.utils import normalize_sensor_data
 from contextlib import asynccontextmanager
 import datetime
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -12,45 +13,46 @@ async def lifespan(app: FastAPI):
     yield
     print("Application shutting down")
 
+
 app = FastAPI(title="Normalizer-API", lifespan=lifespan)
+
 
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
 
+
 @app.post("/webhook")
 async def firestore_webhook(request: Request):
+
     try:
-        body = await request.body()
-        body_str = body.decode('utf-8')
+        data = await request.json()
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON"}
 
-        try:
-            data = json.loads(body_str)
-        except json.JSONDecodeError:
-            return {"error": "Invalid JSON"}
+    print("Received webhook")
+    print(json.dumps(data, indent=2))
 
-        print("Received webhook")
-        print(json.dumps(data, indent=2))
+    try:
+        sensor_reading_rows = normalize_sensor_data(data, data.get("sensor_id"))
 
-        sensor_rows = normalize_sensor_data(data, data.get("sensor_id"))
-
-        if not sensor_rows:
+        if not sensor_reading_rows:
             return {"status": "error", "message": "No valid sensor data found"}
 
         # Insert into database
-        insert_sensor_rows(sensor_rows)
+        insert_sensor_rows(SensorData, sensor_reading_rows)
 
-        log_webhook(data, len(sensor_rows))
+        log_webhook(data, len(sensor_reading_rows))
 
         return {
             "status": "success",
-            "rows_inserted": len(sensor_rows),
-            "message": f"Successfully stored {len(sensor_rows)} sensor readings"
+            "rows_inserted": len(sensor_reading_rows),
+            "message": f"Successfully stored {len(sensor_reading_rows)} sensor readings"
         }
-
     except Exception as e:
         print(f"Webhook erre: {e}")
         return {"error": str(e)}
+
 
 def log_webhook(data: dict, rows_count: int):
     """Log webhook requests to a file for debugging."""
@@ -70,6 +72,7 @@ DATA:
         print(log_message)
     except Exception as e:
         print(f"Failed to write log: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn

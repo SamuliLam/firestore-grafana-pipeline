@@ -69,22 +69,18 @@ def init_db():
     print("Database initialized with sensor_data.")
 
 
-def insert_sensor_rows(rows: list):
+def insert_sensor_rows(model, rows: list):
     """Insert sensor data rows directly into the database."""
     engine = get_engine()
     
     with Session(engine) as session:
         for row in rows:
-            # Convert row object to SensorData instance if needed
-            if isinstance(row, SensorData):
-                session.merge(row)
-            else:
-                # If row is a dict, create a SensorData instance
-                sensor_data = SensorData(**row)
-                session.merge(sensor_data)
+            if not isinstance(model, row):
+                row = model(**row)
+            session.merge(row)
         
         session.commit()
-        print(f"Saved {len(rows)} rows to database.")
+        print(f"Saved {len(rows)} rows to table {model.__tablename__}.")
 
 def get_oldest_timestamp_from_db() -> Optional[datetime]:
     engine = get_engine()

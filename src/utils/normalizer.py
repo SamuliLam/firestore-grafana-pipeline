@@ -9,7 +9,7 @@ SENSOR_READINGS_INFO_FIELDS = ("sensor_id", "timestamp", "sensor_type",
 LIST_VALUE_INTERVAL_MINUTES = 5
 
 
-def normalize_sensor_data(data: dict, sensor_id) -> List[SensorData]:
+def normalize_sensor_data(data: dict, sensor_id: str) -> List[SensorData]:
     """
     Parse incoming JSON data into SensorData objects in EAV format.
 
@@ -26,11 +26,11 @@ def normalize_sensor_data(data: dict, sensor_id) -> List[SensorData]:
     rows = []
 
     # Handle both single object and array of objects
-    data_list = data if isinstance(data, list) else [data]
+    sensor_data_as_list = data if isinstance(data, list) else [data]
 
-    for item in data_list:
-        metrics = {k: v for k, v in item.items() if k not in SENSOR_READINGS_INFO_FIELDS}
-        rows.extend(parse_sensor_item(item, metrics, sensor_id))
+    for sensor_reading in sensor_data_as_list:
+        metrics = {k: v for k, v in sensor_reading.items() if k not in SENSOR_READINGS_INFO_FIELDS}
+        rows.extend(parse_sensor_item(sensor_reading, metrics, sensor_id))
 
     return rows
 
