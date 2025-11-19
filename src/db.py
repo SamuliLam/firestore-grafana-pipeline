@@ -75,7 +75,7 @@ def insert_sensor_rows(model, rows: list):
     
     with Session(engine) as session:
         for row in rows:
-            if not isinstance(model, row):
+            if not isinstance(row, model):
                 row = model(**row)
             session.merge(row)
         
