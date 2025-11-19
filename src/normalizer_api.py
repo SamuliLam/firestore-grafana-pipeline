@@ -37,6 +37,8 @@ async def add_sensor(request: Request):
         print(json.dumps(data, indent=2))
         print("=====================================\n")
 
+        #TODO: remove comment when Sensor table is implemented.
+        #insert_sensor_rows(Sensor, [data])
 
         return {
             "status": "ok",
