@@ -4,6 +4,7 @@ from src.db import insert_sensor_rows, init_db
 from src.utils import normalize_sensor_data
 from contextlib import asynccontextmanager
 import datetime
+from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,9 +15,37 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Normalizer-API", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+@app.post("/api/sensors")
+async def add_sensor(request: Request):
+    try:
+        data = await request.json()
+        print("\n=== RECEIVED SENSOR FROM FRONTEND ===")
+        print(json.dumps(data, indent=2))
+        print("=====================================\n")
+
+
+        return {
+            "status": "ok",
+            "message": "Received sensor data (but NOT stored)",
+            "data": data
+        }
+
+    except Exception as e:
+        print("Error:", e)
+        return {"status": "error", "error": str(e)}
+
 
 @app.post("/webhook")
 async def firestore_webhook(request: Request):
