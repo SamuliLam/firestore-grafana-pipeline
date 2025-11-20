@@ -69,18 +69,25 @@ def init_db():
     print("Database initialized with sensor_data.")
 
 
-def insert_sensor_rows(model, rows: list):
+def insert_sensor_rows(model, dict_rows: list[dict]):
     """Insert sensor data rows directly into the database."""
     engine = get_engine()
-    
+
     with Session(engine) as session:
-        for row in rows:
-            if not isinstance(row, model):
+
+        for row in dict_rows:
+
+            if isinstance(row, dict):
                 row = model(**row)
+            elif not isinstance(row, model):
+                raise TypeError(
+                    f"Row must be a dict or {model.__tablename__} instace, got {type(row)}"
+                )
+
             session.merge(row)
         
         session.commit()
-        print(f"Saved {len(rows)} rows to table {model.__tablename__}.")
+        print(f"Saved {len(dict_rows)} rows to table {model.__tablename__}.")
 
 def get_oldest_timestamp_from_db() -> Optional[datetime]:
     engine = get_engine()

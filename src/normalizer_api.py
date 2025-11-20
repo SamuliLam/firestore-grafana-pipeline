@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 import json
 from src.db import insert_sensor_rows, init_db, SensorData
-from src.utils import normalize_sensor_data
+from src.utils.normalizer import SensorParser
 from contextlib import asynccontextmanager
 import datetime
 from fastapi.middleware.cors import CORSMiddleware
@@ -63,7 +63,8 @@ async def firestore_webhook(request: Request):
     print(json.dumps(data, indent=2))
 
     try:
-        sensor_reading_rows = normalize_sensor_data(data, data.get("sensor_id"))
+        parser = SensorParser(data.get("sensor_type"))
+        sensor_reading_rows = parser.normalize_sensor_data(data, data.get("sensor_id"))
 
         if not sensor_reading_rows:
             return {"status": "error", "message": "No valid sensor data found"}
