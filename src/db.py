@@ -30,8 +30,7 @@ class SensorData(Base):
     """EAV-style sensor data table"""
     __tablename__ = "sensor_data"
     timestamp = Column(DateTime, primary_key=True, nullable=False)
-    sensor_id = Column(String(50), primary_key=True, nullable=False,
-                       ForeignKey("sensor_metadata.sensor_id"))
+    sensor_id = Column(String(50), primary_key=True, nullable=False)
     metric_name = Column(String(100), primary_key=True, nullable=False)
     metric_value = Column(Text, nullable=False)
 
