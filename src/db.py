@@ -30,7 +30,7 @@ class SensorData(Base):
     """EAV-style sensor data table"""
     __tablename__ = "sensor_data"
     timestamp = Column(DateTime, primary_key=True, nullable=False)
-    sensor_id = Column(String(50), primary_key=True, nullable=False, 
+    sensor_id = Column(String(50), primary_key=True, nullable=False,
                        ForeignKey("sensor_metadata.sensor_id"))
     metric_name = Column(String(100), primary_key=True, nullable=False)
     metric_value = Column(Text, nullable=False)
@@ -81,15 +81,15 @@ def insert_sensor_metadata(metadata_rows: list[dict]):
     with Session(engine) as session:
         for row in metadata_rows:
             sensor_id = row.get("sensor_id") if isinstance(row, dict) else row.sensor_id
-            
+
             # Check if sensor_id exists in sensor_data table
             if not sensor_exists_in_data(sensor_id):
                 raise ValueError(f"Sensor {sensor_id} does not exist in sensor_data table")
-            
+
             if isinstance(row, dict):
                 row = SensorMetadata(**row)
             session.merge(row)
-        
+
         session.commit()
         print(f"Saved {len(metadata_rows)} rows to sensor_metadata.")
 
@@ -105,7 +105,7 @@ def insert_sensor_rows(model, dict_rows: list[dict]):
                     f"Row must be a dict or {model.__tablename__} instance, got {type(row)}"
                 )
             session.merge(row)
-        
+
         session.commit()
         print(f"Saved {len(dict_rows)} rows to table {model.__tablename__}.")
 

@@ -1,9 +1,11 @@
 from fastapi import FastAPI, Request
 import json
-from src.db import insert_sensor_rows, init_db
-from src.utils import normalize_sensor_data
+from src.db import insert_sensor_rows, init_db, SensorData
+from src.utils.normalizer import SensorParser
 from contextlib import asynccontextmanager
 import datetime
+from fastapi.middleware.cors import CORSMiddleware
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -12,45 +14,75 @@ async def lifespan(app: FastAPI):
     yield
     print("Application shutting down")
 
+
 app = FastAPI(title="Normalizer-API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
 
-@app.post("/webhook")
-async def firestore_webhook(request: Request):
+@app.post("/api/sensors")
+async def add_sensor(request: Request):
     try:
-        body = await request.body()
-        body_str = body.decode('utf-8')
-
-        try:
-            data = json.loads(body_str)
-        except json.JSONDecodeError:
-            return {"error": "Invalid JSON"}
-
-        print("Received webhook")
+        data = await request.json()
+        print("\n=== RECEIVED SENSOR FROM FRONTEND ===")
         print(json.dumps(data, indent=2))
+        print("=====================================\n")
 
-        sensor_rows = normalize_sensor_data(data)
-
-        if not sensor_rows:
-            return {"status": "error", "message": "No valid sensor data found"}
-
-        # Insert into database
-        insert_sensor_rows(sensor_rows)
-
-        log_webhook(data, len(sensor_rows))
+        #TODO: remove comment when Sensor table is implemented.
+        #insert_sensor_rows(Sensor, [data])
 
         return {
-            "status": "success",
-            "rows_inserted": len(sensor_rows),
-            "message": f"Successfully stored {len(sensor_rows)} sensor readings"
+            "status": "ok",
+            "message": "Received sensor data (but NOT stored)",
+            "data": data
         }
 
     except Exception as e:
+        print("Error:", e)
+        return {"status": "error", "error": str(e)}
+
+
+@app.post("/webhook")
+async def firestore_webhook(request: Request):
+
+    try:
+        data = await request.json()
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON"}
+
+    print("Received webhook")
+    print(json.dumps(data, indent=2))
+
+    try:
+        parser = SensorParser(data.get("sensor_type"))
+        sensor_reading_rows = parser.normalize_sensor_data(data, data.get("sensor_id"))
+
+        if not sensor_reading_rows:
+            return {"status": "error", "message": "No valid sensor data found"}
+
+        # Insert into database
+        insert_sensor_rows(SensorData, sensor_reading_rows)
+
+        log_webhook(data, len(sensor_reading_rows))
+
+        return {
+            "status": "success",
+            "rows_inserted": len(sensor_reading_rows),
+            "message": f"Successfully stored {len(sensor_reading_rows)} sensor readings"
+        }
+    except Exception as e:
         print(f"Webhook erre: {e}")
         return {"error": str(e)}
+
 
 def log_webhook(data: dict, rows_count: int):
     """Log webhook requests to a file for debugging."""
@@ -70,6 +102,7 @@ DATA:
         print(log_message)
     except Exception as e:
         print(f"Failed to write log: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn
