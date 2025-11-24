@@ -1,13 +1,11 @@
 import time
-import traceback
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional
 from sqlalchemy import (
-    create_engine, text, Column, String, Float, DateTime, Text, ForeignKey
+    create_engine, text, Column, String, Float, DateTime, Text
 )
 from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.dialects.postgresql import insert
 
 DB_HOST = "timescaledb"
 DB_PORT = "5432"
@@ -25,6 +23,7 @@ class SensorMetadata(Base):
     sensor_id = Column(String(50), primary_key=True, nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
+    sensor_type = Column(String(50), nullable=False)
 
 class SensorData(Base):
     """EAV-style sensor data table"""

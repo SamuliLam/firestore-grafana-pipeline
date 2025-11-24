@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 import json
-from src.db import insert_sensor_rows, init_db, SensorData
+from src.db import insert_sensor_rows, init_db, SensorData, insert_sensor_metadata
 from src.utils.normalizer import SensorParser
+from src.utils.api_response import make_response
 from contextlib import asynccontextmanager
 import datetime
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,22 +34,22 @@ async def health_check():
 async def add_sensor(request: Request):
     try:
         data = await request.json()
-        print("\n=== RECEIVED SENSOR FROM FRONTEND ===")
-        print(json.dumps(data, indent=2))
-        print("=====================================\n")
-
-        #TODO: remove comment when Sensor table is implemented.
-        #insert_sensor_rows(Sensor, [data])
-
-        return {
-            "status": "ok",
-            "message": "Received sensor data (but NOT stored)",
-            "data": data
-        }
-
+        insert_sensor_metadata([data])
     except Exception as e:
         print("Error:", e)
-        return {"status": "error", "error": str(e)}
+        return make_response(
+            status="error",
+            message=str(e),
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+    return make_response(
+        status="success",
+        message="Sensor added successfully",
+        data=data,
+        status_code=status.HTTP_201_CREATED
+    )
+
 
 
 @app.post("/webhook")
@@ -56,33 +57,43 @@ async def firestore_webhook(request: Request):
 
     try:
         data = await request.json()
-    except json.JSONDecodeError:
-        return {"error": "Invalid JSON"}
-
-    print("Received webhook")
-    print(json.dumps(data, indent=2))
+    except json.JSONDecodeError as e:
+        return make_response(
+            status="error",
+            message=str(e),
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
 
     try:
         parser = SensorParser(data.get("sensor_type"))
         sensor_reading_rows = parser.normalize_sensor_data(data, data.get("sensor_id"))
 
         if not sensor_reading_rows:
-            return {"status": "error", "message": "No valid sensor data found"}
+            return make_response(
+                status="error",
+                message="Message didn't contain valid sensor data",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
 
         # Insert into database
         insert_sensor_rows(SensorData, sensor_reading_rows)
 
         log_webhook(data, len(sensor_reading_rows))
 
-        return {
-            "status": "success",
-            "rows_inserted": len(sensor_reading_rows),
-            "message": f"Successfully stored {len(sensor_reading_rows)} sensor readings"
-        }
     except Exception as e:
-        print(f"Webhook erre: {e}")
-        return {"error": str(e)}
+        print(f"Webhook error: {e}")
+        return make_response(
+            status="error",
+            message=str(e),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
+    return make_response(
+        status="success",
+        message="New data successfully inserted to the database",
+        data=data,
+        status_code=201
+    )
 
 def log_webhook(data: dict, rows_count: int):
     """Log webhook requests to a file for debugging."""

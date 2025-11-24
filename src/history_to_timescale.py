@@ -1,5 +1,4 @@
 from google.cloud import firestore
-import json
 from src.db import insert_sensor_rows, get_oldest_timestamp_from_db, SensorData
 from src.utils.normalizer import SensorParser
 
