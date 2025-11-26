@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, status
 import json
 from src.db import insert_sensor_rows, init_db, SensorData, insert_sensor_metadata
-from src.utils.normalizer import SensorParser
+from src.utils.SensorDataParser import SensorDataParser
 from src.utils.api_response import make_response
 from contextlib import asynccontextmanager
 import datetime
@@ -65,8 +65,8 @@ async def firestore_webhook(request: Request):
         )
 
     try:
-        parser = SensorParser(data.get("sensor_type"))
-        sensor_reading_rows = parser.normalize_sensor_data(data, data.get("sensor_id"))
+        parser = SensorDataParser(data.get("sensor_type"))
+        sensor_reading_rows = parser.parse_sensor_data(data)
 
         if not sensor_reading_rows:
             return make_response(

@@ -1,6 +1,8 @@
 import datetime
 import logging
 from typing import List
+from zoneinfo import ZoneInfo
+
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 SENSOR_READINGS_INFO_FIELDS = ("sensor_id", "timestamp", "sensor_type",
@@ -9,22 +11,17 @@ SENSOR_READINGS_INFO_FIELDS = ("sensor_id", "timestamp", "sensor_type",
 LIST_VALUE_INTERVAL_MINUTES = 5
 
 
-class SensorParser:
+class SensorDataParser:
     def __init__(self, collection_name: str):
         self.collection_name = collection_name
 
-    def parse_firestore_document(self, raw_data: dict):
+    def parse_sensor_data(self, raw_data: dict):
 
-        first_value = next(iter(raw_data.values()))
-        is_nested_dict = isinstance(first_value, dict)
+        if all(not _value_looks_nested(v) for v in raw_data.values()):
+            sensor_id = raw_data.get("sensor_id")
+            return self.normalize_sensor_data(raw_data, sensor_id)
 
-        if is_nested_dict:
-            sensor_id = next(iter(raw_data))
-            data = first_value
-        else:
-            sensor_id = None
-            data = raw_data
-
+        sensor_id, data = extract_sensor_and_metrics(raw_data)
         return self.normalize_sensor_data(data, sensor_id)
 
     def normalize_sensor_data(self, data: dict, sensor_id: str) -> List[dict]:
@@ -56,7 +53,7 @@ class SensorParser:
         #sensor_type = item.get("sensor_type", self.collection_name)
         s_id = sensor_id or item.get("sensor_id")
 
-        base_time = SensorParser.parse_timestamp(item.get("timestamp"))
+        base_time = SensorDataParser.parse_timestamp(item.get("timestamp"))
 
         rows = []
         for metric_name, metric_value in metrics.items():
@@ -77,8 +74,10 @@ class SensorParser:
 
     @staticmethod
     def parse_timestamp(f_timestamp) -> datetime.datetime:
+        helsinki_time = ZoneInfo("Europe/Helsinki")
+
         if not f_timestamp:
-            return datetime.datetime.now(datetime.timezone.utc)
+            return datetime.datetime.now(tz=helsinki_time)
 
         if isinstance(f_timestamp, DatetimeWithNanoseconds):
             return f_timestamp.replace(tzinfo=None)
@@ -100,10 +99,10 @@ class SensorParser:
             base_time: datetime.datetime
     ) -> List[dict]:
         rows = []
-        for i, val in enumerate(metric_values):
-            ts = base_time + datetime.timedelta(minutes=LIST_VALUE_INTERVAL_MINUTES * i)
+        for i, val in enumerate(reversed(metric_values)):
+            ts = base_time - datetime.timedelta(minutes=LIST_VALUE_INTERVAL_MINUTES * i)
             #row = SensorParser.create_sensor_row(metric_name, val, sensor_id, sensor_type, ts)
-            row = SensorParser.create_sensor_row(metric_name, val, sensor_id, ts)
+            row = SensorDataParser.create_sensor_row(metric_name, val, sensor_id, ts)
             if row:
                 rows.append(row)
         return rows
@@ -129,3 +128,42 @@ class SensorParser:
             "metric_value": value,
             #"source": sensor_type,
         }
+
+
+def extract_sensor_and_metrics(d: dict):
+    key = next(iter(d))
+    value = d[key]
+
+    if isinstance(value, str):
+        try:
+            import json
+            parsed = json.loads(value)
+            return extract_sensor_and_metrics({key: parsed})
+        except json.JSONDecodeError:
+            return None, {}
+
+    if isinstance(value, dict):
+        if all(isinstance(v, list) for v in value.values()):
+            clean_id = key.replace(":", "")
+            return clean_id, value
+        else:
+            return extract_sensor_and_metrics(value)
+
+    return None, {}
+
+
+def _value_looks_nested(value):
+    import json
+
+    if isinstance(value, dict):
+        return True
+
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, dict):
+                return True
+        except:
+            pass
+
+    return False

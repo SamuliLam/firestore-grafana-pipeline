@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import (
-    create_engine, text, Column, String, Float, DateTime, Text
+    create_engine, text, Column, String, Float, DateTime, Text, func
 )
 from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.exc import OperationalError
@@ -28,7 +28,7 @@ class SensorMetadata(Base):
 class SensorData(Base):
     """EAV-style sensor data table"""
     __tablename__ = "sensor_data"
-    timestamp = Column(DateTime, primary_key=True, nullable=False)
+    timestamp = Column(DateTime(timezone=True), primary_key=True, nullable=False)
     sensor_id = Column(String(50), primary_key=True, nullable=False)
     metric_name = Column(String(100), primary_key=True, nullable=False)
     metric_value = Column(Text, nullable=False)
@@ -109,6 +109,6 @@ def insert_sensor_rows(model, dict_rows: list[dict]):
 
 def get_oldest_timestamp_from_db() -> Optional[datetime]:
     engine = get_engine()
-    with engine.connect() as conn:
-        result = conn.execute(text(f"SELECT MIN(timestamp) FROM {SensorData.__tablename__}"))
-        return result.scalar()
+    with Session(engine) as session:
+        oldest = session.query(func.min(SensorData.timestamp)).scalar()
+        return oldest

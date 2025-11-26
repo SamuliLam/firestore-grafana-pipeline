@@ -1,1 +1,1 @@
-from .normalizer import SensorParser
+from .SensorDataParser import SensorDataParser
