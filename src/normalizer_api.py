@@ -96,7 +96,7 @@ async def firestore_webhook(request: Request):
     )
 
 @app.delete("/api/sensors/{sensor_id}")
-async def api_delete_sensor(sensor_id: str):
+async def delete_sensor(sensor_id: str):
     try:
         deleted = delete_sensor(sensor_id)
 
