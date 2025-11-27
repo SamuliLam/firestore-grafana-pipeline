@@ -17,6 +17,7 @@ DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NA
 Base = declarative_base()
 ENGINE: Optional[create_engine] = None
 
+
 class SensorMetadata(Base):
     """Sensor metadata table"""
     __tablename__ = "sensor_metadata"
@@ -25,6 +26,7 @@ class SensorMetadata(Base):
     longitude = Column(Float, nullable=False)
     sensor_type = Column(String(50), nullable=False)
 
+
 class SensorData(Base):
     """EAV-style sensor data table"""
     __tablename__ = "sensor_data"
@@ -32,6 +34,7 @@ class SensorData(Base):
     sensor_id = Column(String(50), primary_key=True, nullable=False)
     metric_name = Column(String(100), primary_key=True, nullable=False)
     metric_value = Column(Text, nullable=False)
+
 
 # Database Functions
 def get_engine(max_retries=10, delay=5):
@@ -50,6 +53,7 @@ def get_engine(max_retries=10, delay=5):
             time.sleep(delay)
     raise ConnectionError("Failed to connect to TimescaleDB after multiple attempts.")
 
+
 def init_db():
     """Initialize tables and hypertable."""
     engine = get_engine()
@@ -64,6 +68,7 @@ def init_db():
         conn.commit()
     print("Database initialized with sensor_metadata and sensor_data tables.")
 
+
 def sensor_exists_in_data(sensor_id: str) -> bool:
     """Check if a sensor_id exists in the sensor_data table."""
     engine = get_engine()
@@ -72,6 +77,7 @@ def sensor_exists_in_data(sensor_id: str) -> bool:
             SensorData.sensor_id == sensor_id
         ).first()
         return result is not None
+
 
 def insert_sensor_metadata(metadata_rows: list[dict]):
     """Insert sensor metadata rows. Validates that sensor_id exists in sensor_data table."""
@@ -91,6 +97,7 @@ def insert_sensor_metadata(metadata_rows: list[dict]):
         session.commit()
         print(f"Saved {len(metadata_rows)} rows to sensor_metadata.")
 
+
 def insert_sensor_rows(model, dict_rows: list[dict]):
     """Insert sensor data rows directly into the database."""
     engine = get_engine()
@@ -106,6 +113,19 @@ def insert_sensor_rows(model, dict_rows: list[dict]):
 
         session.commit()
         print(f"Saved {len(dict_rows)} rows to table {model.__tablename__}.")
+
+
+def delete_sensor(sensor_id: str):
+    engine = get_engine()
+    with Session(engine) as session:
+        deleted = session.query(SensorMetadata).filter(
+            SensorMetadata.sensor_id == sensor_id
+        ).delete()
+
+        session.commit()
+
+        return deleted
+
 
 def get_oldest_timestamp_from_db() -> Optional[datetime]:
     engine = get_engine()

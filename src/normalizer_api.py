@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, status
 import json
-from src.db import insert_sensor_rows, init_db, SensorData, insert_sensor_metadata
+from src.db import insert_sensor_rows, init_db, SensorData, insert_sensor_metadata, delete_sensor
 from src.utils.SensorDataParser import SensorDataParser
 from src.utils.api_response import make_response
 from contextlib import asynccontextmanager
@@ -94,6 +94,33 @@ async def firestore_webhook(request: Request):
         data=data,
         status_code=201
     )
+
+@app.delete("/api/sensors/{sensor_id}")
+async def api_delete_sensor(sensor_id: str):
+    try:
+        deleted = delete_sensor(sensor_id)
+
+        if deleted == 0:
+            return make_response(
+                status="error",
+                message=f"Sensor {sensor_id} not found",
+                status_code=404
+            )
+
+        return make_response(
+            status="success",
+            message=f"Sensor {sensor_id} deleted",
+            status_code=200
+        )
+
+    except Exception as e:
+        return make_response(
+            status="error",
+            message=str(e),
+            status_code=500
+        )
+
+
 
 def log_webhook(data: dict, rows_count: int):
     """Log webhook requests to a file for debugging."""
