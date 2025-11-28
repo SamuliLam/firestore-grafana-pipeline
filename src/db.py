@@ -56,18 +56,10 @@ def get_engine(max_retries=10, delay=5):
 
 
 def init_db():
-    """Initialize tables and hypertable."""
+    """Initialize database connection."""
     engine = get_engine()
-    Base.metadata.create_all(engine)
     with engine.connect() as conn:
-        conn.execute(text(f"""
-            SELECT create_hypertable('{SensorData.__tablename__}', 'timestamp',
-                                     chunk_time_interval => interval '1 week',
-                                     if_not_exists => TRUE,
-                                     migrate_data => TRUE);
-        """))
-        conn.commit()
-    print("Database initialized with sensor_metadata and sensor_data tables.")
+        print("Database connection verified.")
 
 
 def sensor_exists_in_data(sensor_id: str) -> bool:
