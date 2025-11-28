@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, BackgroundTasks
 import json
 from src.db import insert_sensor_rows, init_db, SensorData, insert_sensor_metadata, delete_sensor
+from src.history_to_timescale import sync_firestore_to_timescale
 from src.utils.SensorDataParser import SensorDataParser
 from src.utils.api_response import make_response
+from src.utils.sync_status import sync_status
 from contextlib import asynccontextmanager
 import datetime
 from fastapi.middleware.cors import CORSMiddleware
@@ -120,7 +122,21 @@ async def delete_sensor_from_db(sensor_id: str):
             status_code=500
         )
 
+@app.post("/api/history")
+async def sync_history(background_tasks: BackgroundTasks):
+    background_tasks.add_task(sync_firestore_to_timescale)
+    return make_response(
+        status="accepted",
+        message="History synchronization started in background",
+        status_code=202
+    )
 
+@app.get("/api/history/status")
+async def get_history_sync_status():
+    return {
+        "state": sync_status["state"],
+        "error": sync_status["error"]
+    }
 
 def log_webhook(data: dict, rows_count: int):
     """Log webhook requests to a file for debugging."""

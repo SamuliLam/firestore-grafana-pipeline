@@ -23,7 +23,7 @@ services:
   normalizer-api:
     build:
       context: .
-      dockerfile: docker/Dockerfile.api
+      dockerfile: docker/Dockerfile
     container_name: normalizer-api
     command: uvicorn src.normalizer_api:app --host 0.0.0.0 --port 8080 --reload
     ports:
@@ -33,22 +33,10 @@ services:
         condition: service_healthy
     environment:
       - PYTHONUNBUFFERED=1
-    volumes:
-      - .:/app
-
-  firestore_sync:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.history
-    container_name: history_sync
-    depends_on:
-      timescaledb:
-        condition: service_healthy
-    environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/secrets/normalizer-sa.json
     volumes:
+      - .:/app
       - ./docker/secrets/normalizer-sa.json:/secrets/normalizer-sa.json:ro
-
 
   # Grafana
   grafana:
