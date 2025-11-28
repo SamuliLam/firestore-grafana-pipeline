@@ -96,7 +96,7 @@ async def firestore_webhook(request: Request):
     )
 
 @app.delete("/api/sensors/{sensor_id}")
-async def delete_sensor(sensor_id: str):
+async def delete_sensor_from_db(sensor_id: str):
     try:
         deleted = delete_sensor(sensor_id)
 
@@ -164,3 +164,4 @@ if __name__ == "__main__":
         server_process.terminate()
         server_process.wait()
         print("Shutdown complete")
+
