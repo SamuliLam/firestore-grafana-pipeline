@@ -1,5 +1,5 @@
 from google.cloud import firestore
-from src.db import insert_sensor_rows, get_oldest_timestamp_from_db, SensorData
+from src.db import insert_sensor_rows, SensorData, get_oldest_collection_timestamp_from_db
 from src.utils.SensorDataParser import SensorDataParser
 
 # Firestore client
@@ -10,15 +10,16 @@ COLLECTIONS = ["viherpysakki", "ymparistomoduuli"]
 
 
 def sync_firestore_to_timescale():
-    #oldest_ts = get_oldest_timestamp_from_db()
 
     for collection_name in COLLECTIONS:
-        #if oldest_ts:
-        #    docs = CLIENT.collection(collection_name).where("timestamp", "<", oldest_ts).limit(5).stream()
-        #else:
-        #    docs = CLIENT.collection(collection_name).limit(5).stream()
+        oldest_ts = get_oldest_collection_timestamp_from_db(collection_name)
+        if oldest_ts:
+            print(f"Fetching documents older than {oldest_ts} from collection: {collection_name}")
+            docs = CLIENT.collection(collection_name).where("timestamp", "<", oldest_ts).limit(50).stream()
+        else:
+            print(f"Fetching latest documents from collection: {collection_name}")
+            docs = CLIENT.collection(collection_name).limit(50).stream()
 
-        docs = CLIENT.collection(collection_name).limit(50).stream()
         parser = SensorDataParser(collection_name)
         for doc in docs:
             print(f"Parsing collection: {collection_name}")

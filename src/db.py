@@ -34,6 +34,7 @@ class SensorData(Base):
     sensor_id = Column(String(50), primary_key=True, nullable=False)
     metric_name = Column(String(100), primary_key=True, nullable=False)
     metric_value = Column(Text, nullable=False)
+    sensor_type = Column(String(50), nullable=False)
 
 
 # Database Functions
@@ -127,8 +128,12 @@ def delete_sensor(sensor_id: str):
         return deleted
 
 
-def get_oldest_timestamp_from_db() -> Optional[datetime]:
+def get_oldest_collection_timestamp_from_db(collection_name: str) -> Optional[datetime]:
     engine = get_engine()
     with Session(engine) as session:
-        oldest = session.query(func.min(SensorData.timestamp)).scalar()
+        oldest = (
+            session.query(func.min(SensorData.timestamp))
+            .filter(SensorData.sensor_type == collection_name)
+            .scalar()
+        )
         return oldest

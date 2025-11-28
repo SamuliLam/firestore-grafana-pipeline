@@ -50,7 +50,7 @@ class SensorDataParser:
         return rows
 
     def parse_sensor_item(self, item: dict, metrics: dict, sensor_id: str) -> List[dict]:
-        #sensor_type = item.get("sensor_type", self.collection_name)
+        sensor_type = item.get("sensor_type", self.collection_name)
         s_id = sensor_id or item.get("sensor_id")
 
         base_time = SensorDataParser.parse_timestamp(item.get("timestamp"))
@@ -59,12 +59,10 @@ class SensorDataParser:
         for metric_name, metric_value in metrics.items():
             if isinstance(metric_value, list):
                 rows.extend(
-                    self.parse_list_metric(metric_name, metric_value, s_id, base_time)
-                    #self.parse_list_metric(metric_name, metric_value, s_id, sensor_type, base_time)
+                    self.parse_list_metric(metric_name, metric_value, s_id, sensor_type, base_time)
                 )
             else:
-                #row = self.create_sensor_row(metric_name, metric_value, s_id, sensor_type, base_time)
-                row = self.create_sensor_row(metric_name, metric_value, s_id, base_time)
+                row = self.create_sensor_row(metric_name, metric_value, s_id, sensor_type, base_time)
                 if row:
                     rows.append(row)
 
@@ -95,14 +93,13 @@ class SensorDataParser:
             metric_name: str,
             metric_values: list,
             sensor_id: str,
-            #sensor_type: str,
+            sensor_type: str,
             base_time: datetime.datetime
     ) -> List[dict]:
         rows = []
         for i, val in enumerate(reversed(metric_values)):
             ts = base_time - datetime.timedelta(minutes=LIST_VALUE_INTERVAL_MINUTES * i)
-            #row = SensorParser.create_sensor_row(metric_name, val, sensor_id, sensor_type, ts)
-            row = SensorDataParser.create_sensor_row(metric_name, val, sensor_id, ts)
+            row = SensorDataParser.create_sensor_row(metric_name, val, sensor_id, sensor_type, ts)
             if row:
                 rows.append(row)
         return rows
@@ -112,7 +109,7 @@ class SensorDataParser:
             metric_name: str,
             metric_value,
             sensor_id: str,
-            #sensor_type: str,
+            sensor_type: str,
             timestamp: datetime.datetime
     ) -> dict | None:
         try:
@@ -126,7 +123,7 @@ class SensorDataParser:
             "sensor_id": sensor_id,
             "metric_name": metric_name,
             "metric_value": value,
-            #"source": sensor_type,
+            "sensor_type": sensor_type,
         }
 
 
