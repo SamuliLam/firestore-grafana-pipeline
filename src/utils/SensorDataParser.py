@@ -1,12 +1,13 @@
 import datetime
 import logging
+import json
 from typing import List
 from zoneinfo import ZoneInfo
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 SENSOR_READINGS_INFO_FIELDS = ("sensor_id", "timestamp", "sensor_type",
-                               "location", "zone", "battery_voltage", "Battery")
+                               "location", "zone",)
 
 LIST_VALUE_INTERVAL_MINUTES = 5
 
@@ -16,27 +17,25 @@ class SensorDataParser:
         self.collection_name = collection_name
 
     def parse_sensor_data(self, raw_data: dict):
+        first_key_as_timestamp = None
 
         if all(not _value_looks_nested(v) for v in raw_data.values()):
             sensor_id = raw_data.get("sensor_id")
-            return self.normalize_sensor_data(raw_data, sensor_id)
+            return self.normalize_sensor_data(raw_data, sensor_id, first_key_as_timestamp)
+
+        if raw_data:
+            first_key = next(iter(raw_data))
+            parsed_time = SensorDataParser.parse_timestamp(first_key, use_default=False)
+            if parsed_time:
+                first_key_as_timestamp = parsed_time
 
         sensor_id, data = extract_sensor_and_metrics(raw_data)
-        return self.normalize_sensor_data(data, sensor_id)
+        return self.normalize_sensor_data(data, sensor_id, first_key_as_timestamp)
 
-    def normalize_sensor_data(self, data: dict, sensor_id: str) -> List[dict]:
+    def normalize_sensor_data(self, data: dict, sensor_id: str | None,
+                              first_key_ts: datetime.datetime | None) -> List[dict]:
         """
         Parse incoming JSON data into SensorData objects in EAV format.
-
-        Expected JSON format (single reading):
-        {
-            "timestamp": "2024-01-15T10:30:00",
-            "sensor_id": "sensor_001",
-            "zone": "Zone 2",
-            "location": "Room A",
-            "temperature": 24.34,
-            "humidity": 67.5
-        }
         """
         rows = []
 
@@ -45,15 +44,24 @@ class SensorDataParser:
 
         for sensor_reading in sensor_data_as_list:
             metrics = {k: v for k, v in sensor_reading.items() if k not in SENSOR_READINGS_INFO_FIELDS}
-            rows.extend(self.parse_sensor_item(sensor_reading, metrics, sensor_id))
+            rows.extend(self.parse_sensor_item(sensor_reading, metrics, sensor_id, first_key_ts))
 
         return rows
 
-    def parse_sensor_item(self, item: dict, metrics: dict, sensor_id: str) -> List[dict]:
+    def parse_sensor_item(self, item: dict, metrics: dict, sensor_id: str | None,
+                          first_key_ts: datetime.datetime | None) -> List[dict]:
+
         sensor_type = item.get("sensor_type", self.collection_name)
         s_id = sensor_id or item.get("sensor_id")
 
-        base_time = SensorDataParser.parse_timestamp(item.get("timestamp"))
+        item_timestamp = item.get("timestamp")
+
+        if item_timestamp:
+            base_time = SensorDataParser.parse_timestamp(item_timestamp)
+        elif first_key_ts:
+            base_time = first_key_ts
+        else:
+            base_time = SensorDataParser.parse_timestamp(None)
 
         rows = []
         for metric_name, metric_value in metrics.items():
@@ -69,24 +77,32 @@ class SensorDataParser:
         if rows:
             print(f"Parsed {len(rows)} metrics for sensor {s_id} starting {base_time}")
         return rows
-
     @staticmethod
-    def parse_timestamp(f_timestamp) -> datetime.datetime:
+    def parse_timestamp(f_timestamp, use_default: bool = True) -> datetime.datetime | None:
         helsinki_time = ZoneInfo("Europe/Helsinki")
+        utc_time = ZoneInfo("UTC")
 
         if not f_timestamp:
-            return datetime.datetime.now(tz=helsinki_time)
+            return datetime.datetime.now(tz=utc_time) if use_default else None
 
         if isinstance(f_timestamp, DatetimeWithNanoseconds):
-            return f_timestamp.replace(tzinfo=None)
+            if f_timestamp.tzinfo is None:
+                f_timestamp = f_timestamp.replace(tzinfo=utc_time)
+
+            return f_timestamp.astimezone(utc_time)
 
         if isinstance(f_timestamp, str):
             try:
-                return datetime.datetime.fromisoformat(f_timestamp)
+                dt = datetime.datetime.fromisoformat(f_timestamp)
+
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=helsinki_time)
+
+                return dt.astimezone(utc_time)
             except ValueError:
                 pass
 
-        return datetime.datetime.now(datetime.timezone.utc)
+        return datetime.datetime.now(tz=utc_time) if use_default else None
 
     @staticmethod
     def parse_list_metric(
@@ -133,7 +149,6 @@ def extract_sensor_and_metrics(d: dict):
 
     if isinstance(value, str):
         try:
-            import json
             parsed = json.loads(value)
             return extract_sensor_and_metrics({key: parsed})
         except json.JSONDecodeError:
@@ -150,8 +165,6 @@ def extract_sensor_and_metrics(d: dict):
 
 
 def _value_looks_nested(value):
-    import json
-
     if isinstance(value, dict):
         return True
 
