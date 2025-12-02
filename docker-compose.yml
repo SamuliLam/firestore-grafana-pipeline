@@ -50,7 +50,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/Sensor_dashboard.json
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/MainDashboard.json
     depends_on:
       timescaledb:
         condition: service_healthy
