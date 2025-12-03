@@ -71,6 +71,20 @@ def sensor_exists_in_data(sensor_id: str) -> bool:
         ).first()
         return result is not None
 
+def get_all_sensor_metadata() -> list[dict]:
+    """Retrieve all sensor metadata as a list of dictionaries."""
+    engine = get_engine()
+    with Session(engine) as session:
+        results = session.query(SensorMetadata).all()
+        return [
+            {
+                "sensor_id": row.sensor_id,
+                "latitude": row.latitude,
+                "longitude": row.longitude,
+                "sensor_type": row.sensor_type,
+            }
+            for row in results
+        ]
 
 def insert_sensor_metadata(metadata_rows: list[dict]):
     """Insert sensor metadata rows. Validates that sensor_id exists in sensor_data table."""

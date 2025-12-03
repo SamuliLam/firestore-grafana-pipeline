@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, status, BackgroundTasks
 import json
-from src.db import insert_sensor_rows, init_db, SensorData, insert_sensor_metadata, delete_sensor
+from src.db import insert_sensor_rows, init_db, SensorData, insert_sensor_metadata, delete_sensor, get_all_sensor_metadata
 from src.history_to_timescale import sync_firestore_to_timescale
 from src.utils.SensorDataParser import SensorDataParser
 from src.utils.api_response import make_response
@@ -137,6 +137,27 @@ async def get_history_sync_status():
         "state": sync_status["state"],
         "error": sync_status["error"]
     }
+
+
+@app.get("/api/sensor_metadata")
+async def get_sensor_metadata():
+    try:
+        metadata = get_all_sensor_metadata()
+    except Exception as e:
+        return make_response(
+            status="error",
+            message=str(e),
+            status_code=500
+        )
+
+    return make_response(
+        status="success",
+        message="Sensor metadata retrieved successfully",
+        data=metadata,
+        status_code=200
+    )
+
+
 
 def log_webhook(data: dict, rows_count: int):
     """Log webhook requests to a file for debugging."""
