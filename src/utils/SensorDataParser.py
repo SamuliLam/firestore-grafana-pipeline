@@ -6,8 +6,8 @@ from zoneinfo import ZoneInfo
 
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
-SENSOR_READINGS_INFO_FIELDS = ("sensor_id", "timestamp", "sensor_type",
-                               "location", "zone",)
+POSSIBLE_SENSOR_ID_FIELDS = ("sensor_id", "id", "sensorId", "device_id", "deviceId", "sensorID", "SensorID")
+POSSIBLE_TIMESTAMP_FIELDS = ("timestamp", "time", "date", "datetime", "SensorReadingTime")
 
 LIST_VALUE_INTERVAL_MINUTES = 5
 
@@ -43,18 +43,30 @@ class SensorDataParser:
         sensor_data_as_list = data if isinstance(data, list) else [data]
 
         for sensor_reading in sensor_data_as_list:
-            metrics = {k: v for k, v in sensor_reading.items() if k not in SENSOR_READINGS_INFO_FIELDS}
-            rows.extend(self.parse_sensor_item(sensor_reading, metrics, sensor_id, first_key_ts))
+
+            metrics = {
+                k: v for k, v in sensor_reading.items()
+                if k not in POSSIBLE_SENSOR_ID_FIELDS
+                   and k not in POSSIBLE_TIMESTAMP_FIELDS
+                   and k != "sensor_type"
+            }
+
+            try:
+                rows.extend(self.parse_sensor_item(sensor_reading, metrics, sensor_id, first_key_ts))
+            except ValueError as e:
+                logging.warning(f"Skipping sensor data item: {e}")
 
         return rows
 
     def parse_sensor_item(self, item: dict, metrics: dict, sensor_id: str | None,
                           first_key_ts: datetime.datetime | None) -> List[dict]:
-
         sensor_type = item.get("sensor_type", self.collection_name)
-        s_id = sensor_id or item.get("sensor_id")
+        s_id = sensor_id or next((item.get(field) for field in POSSIBLE_SENSOR_ID_FIELDS if item.get(field)), None)
 
-        item_timestamp = item.get("timestamp")
+        if not s_id:
+            raise ValueError("Sensor ID is missing or invalid. Cannot process sensor data.")
+
+        item_timestamp = next((item.get(field) for field in POSSIBLE_TIMESTAMP_FIELDS if item.get(field)), None)
 
         if item_timestamp:
             base_time = SensorDataParser.parse_timestamp(item_timestamp)
@@ -77,6 +89,7 @@ class SensorDataParser:
         if rows:
             print(f"Parsed {len(rows)} metrics for sensor {s_id} starting {base_time}")
         return rows
+
     @staticmethod
     def parse_timestamp(f_timestamp, use_default: bool = True) -> datetime.datetime | None:
         helsinki_time = ZoneInfo("Europe/Helsinki")
@@ -128,17 +141,21 @@ class SensorDataParser:
             sensor_type: str,
             timestamp: datetime.datetime
     ) -> dict | None:
-        try:
-            value = round(float(metric_value), 2)
-        except (TypeError, ValueError):
-            logging.warning("Invalid metric value", extra={"metric": metric_name, "value": metric_value})
+
+        if metric_value is None or metric_value == "" or (isinstance(metric_value, (list, dict)) and not metric_value):
+            logging.warning(f"Metric {metric_name} has an invalid or empty value for sensor {sensor_id}, skipping.")
             return None
+
+        if isinstance(metric_value, (int, float)):
+            metric_value = round(float(metric_value), 4)
+
+        clean_sensor_id = sensor_id.replace(":", "")
 
         return {
             "timestamp": timestamp,
-            "sensor_id": sensor_id,
+            "sensor_id": clean_sensor_id,
             "metric_name": metric_name,
-            "metric_value": value,
+            "metric_value": metric_value,
             "sensor_type": sensor_type,
         }
 
@@ -156,8 +173,7 @@ def extract_sensor_and_metrics(d: dict):
 
     if isinstance(value, dict):
         if all(isinstance(v, list) for v in value.values()):
-            clean_id = key.replace(":", "")
-            return clean_id, value
+            return key, value
         else:
             return extract_sensor_and_metrics(value)
 
