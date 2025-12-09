@@ -1,7 +1,7 @@
 google-cloud-firestore==2.21.0
-pandas
-sqlalchemy
-numpy
-psycopg2-binary
-fastapi
-uvicorn[standard]
+pandas==2.3.3
+SQLAlchemy==2.0.44
+numpy==2.3.4
+psycopg2-binary==2.9.11
+fastapi==0.120.3
+uvicorn==0.38.0
