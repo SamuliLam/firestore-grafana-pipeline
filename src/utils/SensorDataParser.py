@@ -16,12 +16,12 @@ class SensorDataParser:
     def __init__(self, collection_name: str):
         self.collection_name = collection_name
 
-    def parse_sensor_data(self, raw_data: dict):
+    def process_raw_sensor_data(self, raw_data: dict):
         first_key_as_timestamp = None
 
         if all(not _value_looks_nested(v) for v in raw_data.values()):
             sensor_id = raw_data.get("sensor_id")
-            return self.normalize_sensor_data(raw_data, sensor_id, first_key_as_timestamp)
+            return self.convert_to_normalized_format(raw_data, sensor_id, first_key_as_timestamp)
 
         if raw_data:
             first_key = next(iter(raw_data))
@@ -30,10 +30,10 @@ class SensorDataParser:
                 first_key_as_timestamp = parsed_time
 
         sensor_id, data = extract_sensor_and_metrics(raw_data)
-        return self.normalize_sensor_data(data, sensor_id, first_key_as_timestamp)
+        return self.convert_to_normalized_format(data, sensor_id, first_key_as_timestamp)
 
-    def normalize_sensor_data(self, data: dict, sensor_id: str | None,
-                              first_key_ts: datetime.datetime | None) -> List[dict]:
+    def convert_to_normalized_format(self, data: dict, sensor_id: str | None,
+                                     first_key_ts: datetime.datetime | None) -> List[dict]:
         """
         Parse incoming JSON data into SensorData objects in EAV format.
         """

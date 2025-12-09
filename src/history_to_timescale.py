@@ -28,7 +28,7 @@ def sync_firestore_to_timescale():
             parser = SensorDataParser(collection_name)
             for doc in docs:
                 print(f"Parsing collection: {collection_name}")
-                rows = parser.parse_sensor_data(doc.to_dict())
+                rows = parser.process_raw_sensor_data(doc.to_dict())
                 if rows:
                     insert_sensor_rows(SensorData, rows)
                     print(f"Saved ({len(rows)} rows) to document {doc.id}")

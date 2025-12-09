@@ -71,6 +71,7 @@ def sensor_exists_in_data(sensor_id: str) -> bool:
         ).first()
         return result is not None
 
+
 def get_all_sensor_metadata() -> list[dict]:
     """Retrieve all sensor metadata as a list of dictionaries."""
     engine = get_engine()
@@ -91,12 +92,6 @@ def insert_sensor_metadata(metadata_rows: list[dict]):
     engine = get_engine()
     with Session(engine) as session:
         for row in metadata_rows:
-            #sensor_id = row.get("sensor_id") if isinstance(row, dict) else row.sensor_id
-
-            # Check if sensor_id exists in sensor_data table
-            #if not sensor_exists_in_data(sensor_id):
-            #    raise ValueError(f"Sensor {sensor_id} does not exist in sensor_data table")
-
             if isinstance(row, dict):
                 row = SensorMetadata(**row)
             session.merge(row)
