@@ -175,7 +175,19 @@ sudo systemctl enable nginx
 print_status "Nginx configured and started"
 
 echo ""
-echo "Step 11: Waiting for services to be ready..."
+echo "Step 11: Configuring Firewall..."
+if command -v ufw &> /dev/null; then
+    # Ensure SSH is allowed so we don't lock ourselves out
+    sudo ufw allow 22/tcp
+    # Allow HTTP traffic
+    sudo ufw allow 80/tcp
+    print_status "Firewall rules updated (allowed ports 22 and 80)"
+else
+    print_warning "UFW not found, skipping firewall configuration"
+fi
+
+echo ""
+echo "Step 12: Waiting for services to be ready..."
 sleep 10
 
 # Check services
