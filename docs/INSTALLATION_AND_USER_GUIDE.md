@@ -2,7 +2,7 @@
 
 ## Table of Contents
 1. [System Overview](#system-overview)
-2. [Local Installation (Windows/Mac)](#local-installation)
+2. [Local Installation](#local-installation)
 3. [VM Installation (Ubuntu)](#vm-installation)
 4. [User Guide](#user-guide)
 5. [API Reference](#api-reference)
