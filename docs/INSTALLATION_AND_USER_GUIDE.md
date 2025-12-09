@@ -83,8 +83,7 @@ cd firestore-grafana-pipeline
 mkdir -p docker/secrets
 echo "{}" > docker/secrets/normalizer-sa.json
 ```
-
-> **Optional:** For Firestore integration, replace `docker/secrets/normalizer-sa.json` with your Google Cloud service account JSON file.
+**Important:** For Firestore integration, replace `docker/secrets/normalizer-sa.json` with your Google Cloud service account JSON file.
 
 ### Step 3: Start Docker Services
 
