@@ -151,7 +151,7 @@ sudo apt update && sudo apt upgrade -y
 
 sudo apt install curl
 
-curl -fsSL https://raw.githubusercontent.com/SamuliLam/firestore-grafana-pipeline/main/scripts/vm-setup.sh
+curl -fsSL https://raw.githubusercontent.com/SamuliLam/firestore-grafana-pipeline/main/scripts/vm-setup.sh | bash
 ```
 
 This script will:
