@@ -42,20 +42,19 @@ The sensor data system is a full-stack application for collecting, storing, and 
 
 ### Default Credentials
 
-| Service | Username | Password | Access |
-|---------|----------|----------|--------|
-| Grafana | `admin` | `admin` | http://10.120.36.69/grafana/ |
-| TimescaleDB | `admin` | `admin` | psql connection only |
+| Service | Username | Password |
+|---------|----------|----------|
+| Grafana | `admin` | `admin` |
+| TimescaleDB | `admin` | `admin` |
 
 ### Service Ports
 
-| Service | Port | Local URL | VM URL |
+| Service | Port | Local URL | VM URL (via Nginx) |
 |---------|------|-----------|--------|
-| Frontend | 5173 | http://localhost:5173 | http://10.120.36.69/ |
-| Backend API | 8080 | http://localhost:8080 | http://10.120.36.69/api |
-| TimescaleDB | 5432 | localhost:5432 | localhost:5432 |
-| Grafana | 3000 | http://localhost:3000 | http://10.120.36.69/grafana/ |
-| Nginx | 80 | N/A (local) | http://10.120.36.69/ |
+| Frontend | 5173 | http://localhost:5173 | http://VM-IP/ |
+| Backend API | 8080 | http://localhost:8080 | http://VM-IP/api/ |
+| TimescaleDB | 5432 | localhost:5432 | localhost:5432 | psql only
+| Grafana | 3000 | http://localhost:3000 | http://VM-IP/grafana/ |
 
 ---
 
@@ -63,10 +62,9 @@ The sensor data system is a full-stack application for collecting, storing, and 
 
 ### Prerequisites
 
-- **Docker Desktop** (Windows/Mac): https://www.docker.com/products/docker-desktop
-- **Node.js 18+**: https://nodejs.org/ (LTS version recommended)
-- **Git**: https://git-scm.com/
-- **Text Editor**: VS Code or similar
+- **Docker Desktop**
+- **Node.js 18+**
+- **Git**
 
 ### Step 1: Clone Repositories
 
@@ -100,11 +98,10 @@ docker compose ps
 
 Expected output:
 ```
-NAME                      STATUS
-timescaledb               Up (healthy)
-firestore-grafana-...     Up
-grafana                   Up
-normalizer-api            Up
+NAME                STATUS
+timescaledb         Up (healthy)
+normalizer-api      Up
+grafana             Up
 ```
 
 ### Step 4: Setup Frontend
@@ -128,122 +125,99 @@ You should see:
 
 ### Step 5: Verify Installation
 
-Open these URLs in your browser:
-
 | URL | Expected Result |
 |-----|-----------------|
-| http://localhost:5173 | React frontend loads (sensor management UI) |
+| http://localhost:5173 | React frontend with sensor management UI |
 | http://localhost:3000 | Grafana login page (admin/admin) |
 | http://localhost:8080/health | `{"status":"ok"}` |
-
-### Step 6: First Steps
-
-1. **Add a test sensor** in the frontend:
-   - Sensor ID: `test-sensor-01`
-   - Latitude: `60.1699`
-   - Longitude: `24.9384`
-   - Type: `urban`
-
-2. **View in Grafana**:
-   - Go to http://localhost:3000
-   - Login with admin/admin
-   - Navigate to Dashboards → MainDashboard
-
-### Optional: Load Firestore History
-
-If you have Firestore credentials:
-
-1. Replace `docker/secrets/normalizer-sa.json` with your service account JSON
-2. Restart backend: `docker compose restart normalizer-api`
-3. Click **"Load History"** button in the frontend
 
 ---
 
 ## VM Installation (Ubuntu 20.04+)
 
-This guide deploys the system to a production Ubuntu VM. It uses Nginx as a reverse proxy to serve the frontend and route API requests on a single port (80).
+This guide deploys the system to a production Ubuntu VM with Nginx as reverse proxy.
 
 ### Prerequisites
 
 - Ubuntu 20.04 or newer
 - SSH access to the VM
-- Credentials: `username` and `password`
-- VM IP address (e.g., `10.120.36.69`)
+- VM IP address (e.g., `10.120.36.70`)
 
-### Step 1: Connect to VM
+### Quick Setup (Automated Script)
+
+For a fast, automated installation, SSH into your VM and run:
 
 ```bash
-ssh username@10.120.36.69
+curl -fsSL https://raw.githubusercontent.com/SamuliLam/firestore-grafana-pipeline/main/scripts/vm-setup.sh | bash
 ```
 
-When prompted, enter your password.
+This script will:
+1. Install Docker, Node.js, and Nginx
+2. Clone both repositories
+3. Start all services
+4. Configure Nginx reverse proxy
+
+After running, access your app at `http://VM-IP/`
+
+> **Note:** If you just installed Docker, log out and back in, then run:
+> `cd /opt/sensordata/firestore-grafana-pipeline && docker compose up -d`
+
+---
+
+### Manual Installation (Step by Step)
+
+If you prefer to run commands manually, follow the steps below.
+
+#### Step 1: Connect to VM
+
+```bash
+ssh username@vm-ip
+```
 
 ### Step 2: Install Docker
 
-Run these commands **one at a time**:
-
 ```bash
-# Update system packages
+# Update system
 sudo apt update && sudo apt upgrade -y
-```
 
-```bash
-# Install Docker dependencies
-sudo apt install -y ca-certificates curl gnupg lsb-release git
-```
-
-```bash
-# Install curl
 sudo apt install curl
-```
 
-```bash
+# Install dependencies
+sudo apt install -y ca-certificates curl gnupg lsb-release git
+
 # Add Docker's GPG key
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-```
 
-```bash
 # Add Docker repository
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-```
 
-```bash
-# Install Docker and Docker Compose
+# Install Docker
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-```
 
-```bash
-# Add your user to docker group (avoid sudo for docker commands)
+# Add user to docker group
 sudo usermod -aG docker $USER
 ```
 
-**⚠️ Important:** You must log out and log back in for the group change to take effect:
-
+**Important:** Log out and back in for group changes:
 ```bash
 exit
-# Then reconnect:
-ssh username@10.120.36.69
+ssh username@VM-IP
 ```
 
 ### Step 3: Install Node.js
 
 ```bash
-# Add NodeSource repository for Node.js 20
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-
-# Install Node.js and npm
 sudo apt install -y nodejs
-```
 
-Verify installation:
-```bash
+# Verify
 node --version   # Should show v20.x.x
 npm --version    # Should show 10.x.x
 ```
 
-### Step 4: Clone and Setup Repositories
+### Step 4: Clone Repositories
 
 ```bash
 # Create application directory
@@ -251,19 +225,43 @@ sudo mkdir -p /opt/sensordata
 sudo chown $USER:$USER /opt/sensordata
 cd /opt/sensordata
 
-# Clone both repositories
+# Clone repositories
 git clone https://github.com/SamuliLam/firestore-grafana-pipeline.git
 git clone https://github.com/SamuliLam/sensordata-frontend.git
 
-# Create credentials file
+# Create credentials file (required even if empty)
 cd firestore-grafana-pipeline
 mkdir -p docker/secrets
 echo "{}" > docker/secrets/normalizer-sa.json
 ```
 
-> **For Firestore integration:** Replace `docker/secrets/normalizer-sa.json` with your service account JSON file.
+### Step 5: Configure Grafana for Subpath
 
-### Step 5: Start Backend Services
+**CRITICAL:** Grafana must be configured to work behind Nginx at `/grafana/`.
+
+Edit `docker-compose.yml`:
+```bash
+nano docker-compose.yml
+```
+
+Find the `grafana` service and ensure these environment variables are set:
+```yaml
+grafana:
+  image: grafana/grafana:latest
+  environment:
+    - GF_SECURITY_ADMIN_USER=admin
+    - GF_SECURITY_ADMIN_PASSWORD=admin
+    - GF_SECURITY_ALLOW_EMBEDDING=true
+    - GF_AUTH_ANONYMOUS_ENABLED=true
+    - GF_SERVER_ROOT_URL=http://localhost:3000/grafana/    # MUST have trailing slash!
+    - GF_SERVER_SERVE_FROM_SUB_PATH=true
+```
+
+**Key points:**
+- `GF_SERVER_ROOT_URL` **MUST** end with `/grafana/` (trailing slash required!)
+- `GF_SERVER_SERVE_FROM_SUB_PATH` **MUST** be `true`
+
+### Step 6: Start Backend Services
 
 ```bash
 cd /opt/sensordata/firestore-grafana-pipeline
@@ -275,22 +273,18 @@ docker compose up -d
 docker compose ps
 ```
 
-All containers should show "Up" or "Up (healthy)":
-```
-NAME                    STATUS
-timescaledb             Up (healthy)
-normalizer-api          Up
-grafana                 Up
-```
-
-Test the API:
+Test the services:
 ```bash
+# Test API
 curl http://localhost:8080/health
+# Should return: {"status":"ok"}
+
+# Test Grafana dashboards are loaded
+curl http://localhost:3000/api/search
+# Should return JSON array with dashboards
 ```
 
-Should return: `{"status":"ok"}`
-
-### Step 6: Build Frontend
+### Step 7: Build Frontend
 
 ```bash
 cd /opt/sensordata/sensordata-frontend
@@ -298,16 +292,13 @@ cd /opt/sensordata/sensordata-frontend
 # Install dependencies
 npm install
 
-# Build for production (creates dist/ folder)
+# Build for production
 npm run build
 ```
 
-This creates optimized static files in the `dist/` directory that Nginx will serve.
-
-### Step 7: Install and Configure Nginx
+### Step 8: Configure Nginx
 
 ```bash
-# Install Nginx
 sudo apt install -y nginx
 
 # Create Nginx configuration
@@ -316,7 +307,7 @@ server {
     listen 80;
     server_name _;
 
-    # Frontend React app
+    # Frontend React app (SPA)
     location / {
         root /opt/sensordata/sensordata-frontend/dist;
         try_files $uri $uri/ =404;
@@ -341,9 +332,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
     }
 
-    # Grafana proxy
+    # Grafana proxy - NO trailing slash on proxy_pass!
     location /grafana/ {
-        proxy_pass http://localhost:3000/;
+        proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -354,78 +345,42 @@ server {
 EOF
 ```
 
+**CRITICAL Nginx settings for Grafana:**
+- `location /grafana/` - matches requests starting with `/grafana/`
+- `proxy_pass http://localhost:3000;` - **NO trailing slash!** This preserves the `/grafana/` prefix when forwarding to Grafana
+
 Enable the configuration:
 ```bash
-# Create symbolic link to enable the site
+# Enable site
 sudo ln -sf /etc/nginx/sites-available/sensordata /etc/nginx/sites-enabled/sensordata
 
 # Remove default site
 sudo rm -f /etc/nginx/sites-enabled/default
 
-# Test Nginx configuration
+# Test configuration
 sudo nginx -t
-# Should output: "syntax is ok" and "test is successful"
 
-# Start Nginx and enable auto-start on reboot
+# Start Nginx
 sudo systemctl start nginx
 sudo systemctl enable nginx
 ```
 
-### Step 8: Configure Firewall
+### Step 9: Verify Installation
 
-If firewall is enabled (`ufw`), allow traffic:
+From your local machine browser:
+
+| URL | Expected Result |
+|-----|-----------------|
+| http://VM-IP/ | Frontend loads with sensor management UI |
+| http://VM-IP/grafana/ | Grafana UI (login: admin/admin) |
+| http://VM-IP/api/sensor_metadata | JSON array of sensors |
+| http://VM-IP/grafana/d/ad8fclh/main-dashboard | Main dashboard loads |
+
+### Step 10: Configure Firewall (if enabled)
 
 ```bash
 sudo ufw allow 22/tcp    # SSH
 sudo ufw allow 80/tcp    # HTTP
-sudo ufw allow 5432/tcp  # PostgreSQL (optional, for external access)
-```
-
-### Step 9: Access the Application
-
-From your local machine, open these URLs in a browser:
-
-| Application | URL |
-|-------------|-----|
-| **Frontend** | http://10.120.36.69/ |
-| **Grafana** | http://10.120.36.69/grafana/ (login: admin/admin) |
-| **API** | http://10.120.36.69/api/sensor_metadata |
-
----
-
-## Updating the Deployment
-
-When you make changes to the code:
-
-### Update Frontend Code
-
-```bash
-# On your local machine, commit and push changes to Git
-git add .
-git commit -m "Update frontend"
-git push origin fix-frontend-build-types
-
-# On the VM, pull changes and rebuild
-cd /opt/sensordata/sensordata-frontend
-git pull origin fix-frontend-build-types
-npm run build
-
-# Reload Nginx to serve new files
-sudo systemctl reload nginx
-```
-
-### Update Backend Code
-
-```bash
-# On your local machine
-git add .
-git commit -m "Update backend"
-git push origin main
-
-# On the VM, pull and restart
-cd /opt/sensordata/firestore-grafana-pipeline
-git pull origin main
-docker compose up -d --build
 ```
 
 ---
@@ -439,292 +394,286 @@ The frontend provides a sensor management interface with:
 - **Left Panel**: Add, remove, or import sensors
 - **Right Panel**: Table of all sensors with details
 - **Top Bar**: Load historical data from Firestore
-- **Grafana Embeds**: View visualizations below the table
+- **Embedded Grafana**: Visualizations (map, charts) displayed inline
 
 ### Adding a Sensor
 
-1. Open http://10.120.36.69/ in your browser
-2. In the **left panel**, find the "Add New Sensor" section
-3. Fill in the form:
+1. Open http://VM-IP/ in your browser
+2. In the **left panel**, find "Add New Sensor"
+3. Fill in:
    - **Sensor ID**: Unique identifier (e.g., `sensor-001`)
    - **Latitude**: Y-coordinate (e.g., `60.1699`)
    - **Longitude**: X-coordinate (e.g., `24.9384`)
-   - **Sensor Type**: Select from dropdown (e.g., `urban`, `park`, `road`)
+   - **Sensor Type**: Select from dropdown
 4. Click **"Add Sensor"**
-5. The sensor appears in the table on the right
 
 ### Removing a Sensor
 
-1. In the **left panel**, find the "Remove Sensor" section
-2. Enter the Sensor ID you want to delete
+1. Find "Remove Sensor" section in the left panel
+2. Enter the Sensor ID
 3. Click **"Remove Sensor"**
 
-⚠️ **This is permanent** — the sensor and all its data will be deleted.
+⚠️ **Warning:** This permanently deletes the sensor and all its data.
 
-### Importing Sensors from CSV
+### Importing from CSV
 
-Bulk import sensors from a CSV file:
+Prepare a CSV with headers:
+```csv
+sensor_id,latitude,longitude,sensor_type
+sensor-001,60.1699,24.9384,urban
+sensor-002,60.1710,24.9400,park
+```
 
-1. Prepare a CSV file with headers:
-   ```csv
-   sensor_id,latitude,longitude,sensor_type
-   sensor-001,60.1699,24.9384,urban
-   sensor-002,60.1710,24.9400,park
-   sensor-003,60.1650,24.9450,road
-   ```
+1. Click **"Choose file"** in the Import section
+2. Select your CSV file
+3. Click **"Import CSV"**
 
-2. In the **left panel**, find the "Import from CSV" section
-3. Click **"Choose file"** and select your CSV
-4. Click **"Import CSV"**
-5. All sensors are added to the system
+### Loading Historical Data
 
-### Loading Historical Data from Firestore
+> Requires valid Firestore credentials in `docker/secrets/normalizer-sa.json`
 
-> **Note:** Requires valid Firestore credentials in `docker/secrets/normalizer-sa.json`
+1. Click **"Load History"** button
+2. Wait for sync to complete
+3. Data appears in Grafana dashboards
 
-1. Click the **"Load History"** button at the top of the page
-2. The button will show a loading indicator
-3. Wait for the sync to complete (may take several minutes depending on data size)
-4. Status message appears:
-   - ✅ **"Historical data loaded successfully"** → Data was imported
-   - ❌ **"Error loading historical data"** → Check credentials or logs
+### Viewing Grafana Dashboards
 
-### Viewing Sensor Details
+Direct access: http://VM-IP/grafana/
 
-**In the frontend table:**
-- Click any row to see full sensor metadata
-- Sensor ID, location (lat/lon), type, and creation timestamp
-
-**In Grafana:**
-1. Navigate to http://10.120.36.69/grafana/
-2. Login with `admin` / `admin`
-3. Go to **Dashboards** → **MainDashboard** or **Sensors_dashboard**
-4. Use the **time picker** (top right) to select date range
-5. Sensor graphs show temperature, humidity, and other metrics
+Available dashboards:
+- **Main Dashboard** (`/grafana/d/ad8fclh/main-dashboard`) - Overview with map
+- **Sensor View** (`/grafana/d/ad6d5kp/sensori-kohtainen-nakyma`) - Per-sensor details
+- **Overview** (`/grafana/d/adlcv8h/yleisnakyma`) - All sensors summary
 
 ---
 
 ## API Reference
 
-All API calls use relative paths, which Nginx routes to the backend on port 8080.
+All API endpoints use relative paths (e.g., `/api/...`).
 
 ### Health Check
-
 ```bash
 GET /health
+# Response: {"status":"ok"}
 ```
 
-**Response:**
-```json
-{"status":"ok"}
-```
-
-### Sensor Management
-
-#### List All Sensors
+### List Sensors
 ```bash
 GET /api/sensor_metadata
+# Response: [{"sensor_id": "...", "latitude": ..., "longitude": ..., "sensor_type": "..."}]
 ```
 
-**Response:**
-```json
-[
-  {
-    "sensor_id": "sensor-001",
-    "latitude": 60.1699,
-    "longitude": 24.9384,
-    "sensor_type": "urban"
-  }
-]
-```
-
-#### Add a Sensor
+### Add Sensor
 ```bash
 POST /api/sensors
 Content-Type: application/json
 
-{
-  "sensor_id": "sensor-001",
-  "latitude": 60.1699,
-  "longitude": 24.9384,
-  "sensor_type": "urban"
-}
+{"sensor_id": "sensor-001", "latitude": 60.17, "longitude": 24.94, "sensor_type": "urban"}
 ```
 
-**Response:**
-```json
-{"message": "Sensor added successfully"}
-```
-
-#### Delete a Sensor
+### Delete Sensor
 ```bash
 DELETE /api/sensors/{sensor_id}
 ```
 
-**Response:**
-```json
-{"message": "Sensor deleted successfully"}
-```
-
-### Bulk Operations
-
-#### Import CSV
+### Import CSV
 ```bash
 POST /api/sensors/import
 Content-Type: multipart/form-data
-
 file=<csv_file>
 ```
 
-**CSV Format:**
-```
-sensor_id,latitude,longitude,sensor_type
-sensor-001,60.1699,24.9384,urban
-```
-
-### Firestore History
-
-#### Start Historical Data Load
+### Load Firestore History
 ```bash
 POST /api/history
 ```
 
-**Response:**
-```json
-{"message": "Historical data loading started"}
-```
-
-#### Check Load Status
+### Check History Status
 ```bash
 GET /api/history/status
-```
-
-**Response:**
-```json
-{
-  "status": "loading",
-  "progress": 45
-}
-```
-
-or
-
-```json
-{
-  "status": "completed",
-  "records_loaded": 12345
-}
-```
-
-### Webhook
-
-#### Receive Sensor Data
-```bash
-POST /webhook
-Content-Type: application/json
-
-{
-  "sensor_id": "sensor-001",
-  "temperature": 22.5,
-  "humidity": 45.2,
-  "timestamp": "2025-12-08T20:30:00Z"
-}
+# Response: {"status": "loading", "progress": 45} or {"status": "completed", "records_loaded": 12345}
 ```
 
 ---
 
 ## Troubleshooting
 
-### Connection Issues
+### Grafana Shows "Failed to load application files"
 
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| Cannot connect to http://10.120.36.69/ | VM not reachable or Nginx not running | `ssh` into VM, check: `sudo systemctl status nginx` |
-| Page loads but shows "Cannot GET /" | Frontend not built | Run `npm run build` in frontend directory, reload Nginx |
-| API calls fail (CORS errors) | Relative paths not used in frontend code | Check frontend code uses `/api/` not `http://localhost:8080/api/` |
-| Infinite redirect loop (browser spinning) | Bad Nginx try_files configuration | Ensure `error_page 404 =200 /index.html;` is used, not `try_files $uri $uri/ /index.html;` |
+This is the most common issue. It means Grafana's subpath configuration is wrong.
 
-### Backend/Database Issues
+**Symptoms:**
+- Accessing http://VM-IP/grafana/ shows orange error page
+- URL redirects to `/grafana/grafana/` (double path)
 
-| Problem | Solution |
-|---------|----------|
-| `docker compose ps` shows container "Exited" | Check logs: `docker compose logs normalizer-api` |
-| "Failed to add sensor" error | Backend API not responding. Verify: `curl http://localhost:8080/health` |
-| "Connection refused" on port 8080 | Backend container crashed. Restart: `docker compose restart normalizer-api` |
-| Database locked/slow queries | Verify TimescaleDB is healthy: `docker compose logs timescaledb` |
+**Solution:**
 
-### Frontend Issues
+1. **Check Grafana environment variables** in `docker-compose.yml`:
+   ```yaml
+   - GF_SERVER_ROOT_URL=http://localhost:3000/grafana/   # MUST have trailing slash!
+   - GF_SERVER_SERVE_FROM_SUB_PATH=true
+   ```
 
-| Problem | Solution |
-|---------|----------|
-| "Sensor ID is required" | Leave the Sensor ID field empty. It's a required field. |
-| "Latitude/Longitude must be a number" | Enter valid numbers, e.g., 60.17 not "sixty" |
-| Form submissions don't work | Check browser console (F12) for error messages. Verify API calls in Network tab. |
-| CSV import fails | Ensure CSV has correct headers: `sensor_id,latitude,longitude,sensor_type` |
-| "Failed to load historical data" | Firestore credentials missing or invalid. Check `docker/secrets/normalizer-sa.json` exists. |
+2. **Check Nginx proxy_pass** - must NOT have trailing slash:
+   ```nginx
+   location /grafana/ {
+       proxy_pass http://localhost:3000;   # NO trailing slash!
+   }
+   ```
 
-### Nginx Configuration Issues
+3. **Restart both services:**
+   ```bash
+   cd /opt/sensordata/firestore-grafana-pipeline
+   docker compose down grafana
+   docker compose up -d grafana
+   sudo systemctl reload nginx
+   ```
 
-| Problem | Cause | Solution |
-|---------|-------|---------|
-| 502 Bad Gateway | Backend not responding at http://localhost:8080 | Verify backend is running: `docker compose ps` |
-| 404 on /api/ endpoints | API route misconfigured | Check Nginx config: `sudo cat /etc/nginx/sites-available/sensordata` |
-| Grafana returns 502 | Grafana container crashed | Restart: `docker compose restart grafana` |
+### Grafana Dashboard Not Found (404)
 
-### Useful Commands
+**Symptoms:**
+- `curl http://localhost:3000/api/search` returns `[]`
+- Dashboard URLs return 404
+
+**Solution:**
+Check dashboard provisioning:
+```bash
+# Verify dashboard files exist
+ls -la /opt/sensordata/firestore-grafana-pipeline/grafana/provisioning/dashboards/
+
+# Check Grafana logs
+docker logs grafana --tail 50
+
+# Force reload dashboards
+docker compose restart grafana
+sleep 5
+curl http://localhost:3000/api/search
+```
+
+### Frontend Shows But Grafana Embeds Don't Load
+
+**Symptoms:**
+- Frontend UI loads correctly
+- Grafana iframe area shows error or is blank
+
+**Solution:**
+1. Open browser DevTools (F12) → Network tab
+2. Look for failed requests to `/grafana/...`
+3. Check the error - usually 404 or CORS
+
+Verify Grafana allows embedding:
+```yaml
+# In docker-compose.yml grafana section:
+- GF_SECURITY_ALLOW_EMBEDDING=true
+- GF_AUTH_ANONYMOUS_ENABLED=true
+```
+
+### Nginx Redirect Loop
+
+**Symptoms:**
+- Browser shows "too many redirects"
+- Nginx error log: `rewrite or internal redirection cycle`
+
+**Solution:**
+Use `error_page` instead of `try_files` for SPA routing:
+```nginx
+location / {
+    root /opt/sensordata/sensordata-frontend/dist;
+    try_files $uri $uri/ =404;
+    error_page 404 =200 /index.html;
+}
+```
+
+### Default Nginx Page Shows Instead of Frontend
+
+**Symptoms:**
+- Accessing http://VM-IP/ shows "Welcome to nginx!" page
+- Your custom config isn't being used
+
+**Solution:**
+```bash
+# Check if your config is enabled
+ls -la /etc/nginx/sites-enabled/
+
+# If sensordata is missing, re-enable it
+sudo ln -sf /etc/nginx/sites-available/sensordata /etc/nginx/sites-enabled/sensordata
+
+# Remove default if it exists
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# Test and reload
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### API Calls Fail (CORS or Connection Refused)
+
+**Symptoms:**
+- Browser console shows CORS errors
+- Network requests to `/api/` fail
+
+**Solution:**
+1. Verify backend is running: `curl http://localhost:8080/health`
+2. Check Nginx config routes `/api/` correctly
+3. Ensure frontend uses relative paths (`/api/...`) not `localhost:8080`
+
+### Useful Debug Commands
 
 ```bash
-# VM - Check service status
+# Check all services
 docker compose ps
 docker compose logs -f [service_name]
 
-# VM - Nginx diagnostics
-sudo systemctl status nginx
+# Test API directly
+curl http://localhost:8080/health
+curl http://localhost:8080/api/sensor_metadata
+
+# Test Grafana directly
+curl http://localhost:3000/api/search
+
+# Check Nginx
 sudo nginx -t
-sudo cat /var/log/nginx/error.log | tail -50
+sudo systemctl status nginx
+sudo tail -50 /var/log/nginx/error.log
 
-# VM - Restart services
-docker compose restart
-sudo systemctl reload nginx
-
-# VM - View frontend files
-ls -la /opt/sensordata/sensordata-frontend/dist/
-
-# Local - Check backend on VM
-curl http://10.120.36.69/api/sensor_metadata
-curl http://10.120.36.69/health
+# Restart everything
+docker compose down
+docker compose up -d
+sudo systemctl restart nginx
 ```
-
-### Common Error Messages
-
-**"connect ECONNREFUSED 127.0.0.1:8080"**
-- Backend API not running
-- Run: `docker compose restart normalizer-api`
-
-**"Rewrite or internal redirection cycle"** (in nginx/error.log)
-- Bad try_files configuration
-- Fix: Use `error_page 404 =200 /index.html;` instead of `try_files $uri $uri/ /index.html;`
-
-**"Cannot GET /api/sensors"**
-- API route not configured in Nginx
-- Verify: `sudo cat /etc/nginx/sites-available/sensordata | grep -A 5 "location /api"`
 
 ---
 
-## Architecture Notes
+## Quick Reference: Grafana + Nginx Configuration
 
-### Frontend-Backend Communication
+The correct configuration for Grafana behind Nginx at `/grafana/`:
 
-- **Local Dev**: Frontend on `localhost:5173` calls `http://localhost:8080/api/...`
-- **VM Production**: Frontend on `10.120.36.69/` calls `/api/...` (Nginx proxies to backend)
+**docker-compose.yml (Grafana service):**
+```yaml
+environment:
+  - GF_SERVER_ROOT_URL=http://localhost:3000/grafana/
+  - GF_SERVER_SERVE_FROM_SUB_PATH=true
+  - GF_SECURITY_ALLOW_EMBEDDING=true
+  - GF_AUTH_ANONYMOUS_ENABLED=true
+```
 
-### Why Relative Paths in Production?
+**Nginx config:**
+```nginx
+location /grafana/ {
+    proxy_pass http://localhost:3000;    # NO trailing slash!
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
 
-When deployed on the VM, the frontend HTML and the backend API are served from different applications but accessed through a single Nginx gateway on port 80. Using relative paths (`/api/...`) ensures Nginx can intercept and route the requests correctly.
-
-### Database Persistence
-
-TimescaleDB data is stored in a Docker volume named `firestore-grafana-pipeline_timescaledb-data`. This persists across container restarts but will be deleted if you run `docker compose down -v`.
+**Why this works:**
+- Nginx receives `/grafana/d/xxx/dashboard` 
+- `proxy_pass http://localhost:3000` (no trailing slash) forwards as `/grafana/d/xxx/dashboard`
+- Grafana with `SERVE_FROM_SUB_PATH=true` expects and handles the `/grafana/` prefix
+- `ROOT_URL` tells Grafana to generate links with `/grafana/` prefix
 
 ---
 
