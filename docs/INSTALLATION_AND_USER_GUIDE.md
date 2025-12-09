@@ -148,7 +148,11 @@ This guide deploys the system to a production Ubuntu VM with Nginx as reverse pr
 For a fast, automated installation, SSH into your VM and run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SamuliLam/firestore-grafana-pipeline/main/scripts/vm-setup.sh | bash
+sudo apt update && sudo apt upgrade -y
+
+sudo apt install curl
+
+curl -fsSL https://raw.githubusercontent.com/SamuliLam/firestore-grafana-pipeline/fix-frontend-build-types/scripts/vm-setup.sh | bash
 ```
 
 This script will:

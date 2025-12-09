@@ -139,7 +139,7 @@ server {
 
     # API proxy to backend
     location /api/ {
-        proxy_pass http://127.0.0.1:8080/api/;
+        proxy_pass http://localhost:8080/api/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -149,7 +149,7 @@ server {
 
     # Webhook proxy
     location /webhook {
-        proxy_pass http://127.0.0.1:8080/webhook;
+        proxy_pass http://localhost:8080/webhook;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -157,7 +157,7 @@ server {
 
     # Grafana proxy - NO trailing slash on proxy_pass!
     location /grafana/ {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
