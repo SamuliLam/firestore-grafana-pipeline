@@ -171,10 +171,9 @@ After running, access your app at `http://VM-IP/`
 The frontend provides a sensor management interface with:
 
 - **Left Panel**: Add, remove, or import sensors
-- **Right Panel**: Table of all sensors with details
-- **Top Bar**: Load historical data from Firestore
-- **Embedded Grafana**: Visualizations (map, charts) displayed inline
-
+- **Bottom Panel**: Table of all sensors with details
+- **Top Button**: Load historical data from Firestore
+- **Embedded Grafana**: Map
 ### Adding a Sensor
 
 1. Open http://VM-IP/ in your browser
@@ -192,20 +191,8 @@ The frontend provides a sensor management interface with:
 2. Enter the Sensor ID
 3. Click **"Remove Sensor"**
 
-⚠️ **Warning:** This permanently deletes the sensor and all its data.
+**Warning:** This permanently deletes the sensor and all its data.
 
-### Importing from CSV
-
-Prepare a CSV with headers:
-```csv
-sensor_id,latitude,longitude,sensor_type
-sensor-001,60.1699,24.9384,urban
-sensor-002,60.1710,24.9400,park
-```
-
-1. Click **"Choose file"** in the Import section
-2. Select your CSV file
-3. Click **"Import CSV"**
 
 ### Loading Historical Data
 
@@ -216,62 +203,18 @@ sensor-002,60.1710,24.9400,park
 3. Data appears in Grafana dashboards
 
 ### Viewing Grafana Dashboards
+Click the Sensors tab at the Header section to open a general view of all the sensors.
+
+Click a sensor on the data table to view individual sensor data.
+
+To export a CSV file go to any graphana dashboard, hover top right corner and click on three dots -> inspect -> Data Options -> toggle Download for excel -> Download CSV
 
 Direct access: http://VM-IP/grafana/
 
 Available dashboards:
-- **Main Dashboard** (`/grafana/d/ad8fclh/main-dashboard`) - Overview with map
-- **Sensor View** (`/grafana/d/ad6d5kp/sensori-kohtainen-nakyma`) - Per-sensor details
-- **Overview** (`/grafana/d/adlcv8h/yleisnakyma`) - All sensors summary
-
----
-
-## API Reference
-
-All API endpoints use relative paths (e.g., `/api/...`).
-
-### Health Check
-```bash
-GET /health
-# Response: {"status":"ok"}
-```
-
-### List Sensors
-```bash
-GET /api/sensor_metadata
-# Response: [{"sensor_id": "...", "latitude": ..., "longitude": ..., "sensor_type": "..."}]
-```
-
-### Add Sensor
-```bash
-POST /api/sensors
-Content-Type: application/json
-
-{"sensor_id": "sensor-001", "latitude": 60.17, "longitude": 24.94, "sensor_type": "urban"}
-```
-
-### Delete Sensor
-```bash
-DELETE /api/sensors/{sensor_id}
-```
-
-### Import CSV
-```bash
-POST /api/sensors/import
-Content-Type: multipart/form-data
-file=<csv_file>
-```
-
-### Load Firestore History
-```bash
-POST /api/history
-```
-
-### Check History Status
-```bash
-GET /api/history/status
-# Response: {"status": "loading", "progress": 45} or {"status": "completed", "records_loaded": 12345}
-```
+- **Main Dashboard** - Overview with map
+- **Sensor View**  - Per-sensor details
+- **Overview** - All sensors summary
 
 ---
 
@@ -447,13 +390,5 @@ location /grafana/ {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
-
-**Why this works:**
-- Nginx receives `/grafana/d/xxx/dashboard` 
-- `proxy_pass http://localhost:3000` (no trailing slash) forwards as `/grafana/d/xxx/dashboard`
-- Grafana with `SERVE_FROM_SUB_PATH=true` expects and handles the `/grafana/` prefix
-- `ROOT_URL` tells Grafana to generate links with `/grafana/` prefix
-
----
 
 *Last updated: December 2025*
