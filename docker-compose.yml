@@ -54,6 +54,8 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=${GRAFANA_ANONYMOUS_ENABLED}
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/MainDashboard.json
+      - GF_SERVER_ROOT_URL=http://localhost:3000/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     depends_on:
       timescaledb:
         condition: service_healthy
