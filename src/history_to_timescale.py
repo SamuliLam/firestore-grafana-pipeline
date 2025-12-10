@@ -1,14 +1,18 @@
+import os
+
 from google.cloud import firestore
 from src.db import insert_sensor_rows, SensorData, get_oldest_collection_timestamp_from_db
 from src.utils.SensorDataParser import SensorDataParser
 from src.utils.sync_status import sync_status
+from src.utils.SensorDataParser import POSSIBLE_TIMESTAMP_FIELDS
 
 
 # Firestore client
-CLIENT = firestore.Client(project="prj-mtp-jaak-leht-ufl")
+project_id = os.getenv("GCP_PROJECT_ID")
+CLIENT = firestore.Client(project=project_id)
 
 # Firestore collections to fetch history from
-COLLECTIONS = ["viherpysakki", "ymparistomoduuli", "suvilahti_uusi", "suvilahti", "urban"]
+COLLECTIONS = os.getenv("FIRESTORE_COLLECTIONS", "").split(",")
 
 
 def sync_firestore_to_timescale():
@@ -20,10 +24,10 @@ def sync_firestore_to_timescale():
             oldest_ts = get_oldest_collection_timestamp_from_db(collection_name)
             if oldest_ts:
                 print(f"Fetching documents older than {oldest_ts} from collection: {collection_name}")
-                docs = CLIENT.collection(collection_name).where("timestamp", "<", oldest_ts).limit(10).stream()
+                docs = CLIENT.collection(collection_name).where("timestamp", "<", oldest_ts).stream()
             else:
                 print(f"Fetching latest documents from collection: {collection_name}")
-                docs = CLIENT.collection(collection_name).limit(10).stream()
+                docs = CLIENT.collection(collection_name).stream()
 
             parser = SensorDataParser(collection_name)
             for doc in docs:

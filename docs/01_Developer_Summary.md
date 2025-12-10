@@ -27,14 +27,14 @@ The system is designed to be extensible, allowing new sensors, metrics, and visu
 
 ### 3. Implemented Features / Out of Scope / Not Implemented
 Implemented:
-- Live sensor data investion via REST API
+- Live sensor data ingestion via REST API
 - On-demand historical data synchronization from Firestore
 - Sensor metadata management via frontend UI
 - Visualization of sensor metrics using embedded Grafana dashboards
+- Visualization of sensor metadata using geo-mapping features in Grafana
 
 Out of Scope / Not Implemented:
 - User authentication and role-based access control (planned but not implemented)
 - Alerting and notifications in Grafana
- 
 
 ### 4. 

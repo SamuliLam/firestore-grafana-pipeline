@@ -13,16 +13,3 @@ datasources:
       sslmode: "disable"
       timescaledb: true
     isDefault: true
-#datasources:
-#  - name: TimescaleDB
-#    type: postgres
-#    access: proxy
-#    url: timescaledb:5432
-#    user: admin
-#    database: sensor_data
-#    secureJsonData:
-#      password: admin
-#    jsonData:
-#      sslmode: "disable"
-#      timescaledb: true
-#    isDefault: true

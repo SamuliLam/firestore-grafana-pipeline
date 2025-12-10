@@ -1,18 +1,15 @@
+import os
 import time
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import (
-    create_engine, text, Column, String, Float, DateTime, Text, func
+    create_engine, Column, String, Float, DateTime, Text, func
 )
 from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.exc import OperationalError
 
-DB_HOST = "timescaledb"
-DB_PORT = "5432"
-DB_USER = "admin"
-DB_PASSWORD = "admin"
-DB_NAME = "sensor_data"
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+DATABASE_URL = os.getenv("POSTGRES_URL")
 
 Base = declarative_base()
 ENGINE: Optional[create_engine] = None
