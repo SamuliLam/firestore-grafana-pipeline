@@ -141,7 +141,7 @@ class TestFirestoreWebhook:
         """Test successful webhook processing"""
         # Setup mock parser
         mock_parser_instance = Mock()
-        mock_parser_instance.parse_sensor_data.return_value = [
+        mock_parser_instance.process_raw_sensor_data.return_value = [
             {"sensor_id": "sensor_001", "value": 22.5}
         ]
         mock_sensor_parser.return_value = mock_parser_instance
@@ -158,7 +158,7 @@ class TestFirestoreWebhook:
 
         # Verify parser was called correctly
         mock_sensor_parser.assert_called_once_with("temperature")
-        mock_parser_instance.parse_sensor_data.assert_called_once_with(sample_sensor_data)
+        mock_parser_instance.process_raw_sensor_data.assert_called_once_with(sample_sensor_data)
         mock_db_functions['insert_rows'].assert_called_once()
 
 
@@ -179,7 +179,7 @@ class TestFirestoreWebhook:
         """Test webhook when parser returns no valid data"""
         # Setup mock parser to return empty list
         mock_parser_instance = Mock()
-        mock_parser_instance.parse_sensor_data.return_value = []
+        mock_parser_instance.process_raw_sensor_data.return_value = []
         mock_sensor_parser.return_value = mock_parser_instance
 
         response = client.post("/webhook", json=sample_sensor_data)
@@ -193,7 +193,7 @@ class TestFirestoreWebhook:
     def test_webhook_parser_exception(self, client, mock_sensor_parser, sample_sensor_data):
         """Test webhook when parser raises an exception"""
         mock_parser_instance = Mock()
-        mock_parser_instance.parse_sensor_data.side_effect = Exception("Parse error")
+        mock_parser_instance.process_raw_sensor_data.side_effect = Exception("Parse error")
         mock_sensor_parser.return_value = mock_parser_instance
 
         response = client.post("/webhook", json=sample_sensor_data)
@@ -214,7 +214,7 @@ class TestFirestoreWebhook:
         """Test webhook when database insertion fails"""
         # Setup mock parser
         mock_parser_instance = Mock()
-        mock_parser_instance.parse_sensor_data.return_value = [{"sensor_id": "test"}]
+        mock_parser_instance.process_raw_sensor_data.return_value = [{"sensor_id": "test"}]
         mock_sensor_parser.return_value = mock_parser_instance
 
         # Make insert fail
@@ -232,7 +232,7 @@ class TestFirestoreWebhook:
         """Test that webhook logs data to file"""
         # Setup mock parser
         mock_parser_instance = Mock()
-        mock_parser_instance.parse_sensor_data.return_value = [{"sensor_id": "test"}]
+        mock_parser_instance.process_raw_sensor_data.return_value = [{"sensor_id": "test"}]
         mock_sensor_parser.return_value = mock_parser_instance
 
         mock_file = mock_open()
@@ -464,7 +464,7 @@ class TestEndToEnd:
         parsed_rows = [
             {"sensor_id": "sensor_001", "temperature": 22.5, "timestamp": "2024-01-01T12:00:00"}
         ]
-        mock_parser_instance.parse_sensor_data.return_value = parsed_rows
+        mock_parser_instance.process_raw_sensor_data.return_value = parsed_rows
         mock_sensor_parser.return_value = mock_parser_instance
 
         # Execute request
@@ -474,7 +474,7 @@ class TestEndToEnd:
         # Verify complete flow
         assert response.status_code == 201
         mock_sensor_parser.assert_called_once_with("temperature")
-        mock_parser_instance.parse_sensor_data.assert_called_once()
+        mock_parser_instance.process_raw_sensor_data.assert_called_once()
         mock_db_functions['insert_rows'].assert_called_once()
 
 
@@ -505,7 +505,7 @@ class TestErrorHandling:
         data = {"temperature": 22.5}  # Missing sensor_type
 
         mock_parser_instance = Mock()
-        mock_parser_instance.parse_sensor_data.return_value = []
+        mock_parser_instance.process_raw_sensor_data.return_value = []
         mock_sensor_parser.return_value = mock_parser_instance
 
         response = client.post("/webhook", json=data)
