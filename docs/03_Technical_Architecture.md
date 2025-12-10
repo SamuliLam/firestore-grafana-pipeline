@@ -73,18 +73,19 @@ graph TD
     B -->|Trigger events| C[Cloud Run Services]
     C -->|Parse & enrich| D[Firestore Collections]
     C -->|Forward enriched data| E[Normalizer REST API]
+    D -->|Forward history data| E[Normalizer REST API]
     E -->|Process & normalize| F[SensorDataParser]
     F -->|EAV format| G[TimescaleDB]
     G -->|SQL queries| H[Grafana Dashboards]
     H -->|Embedded iframes| I[Frontend Application]
     
-    style A fill:#e1f5ff
-    style B fill:#fff4e1
-    style C fill:#ffe1f5
-    style D fill:#e1ffe1
-    style E fill:#f5e1ff
-    style F fill:#ffe1e1
-    style G fill:#e1f5e1
-    style H fill:#f5f5e1
-    style I fill:#e1e1ff
+    style A fill:#4FC3F7,stroke:#0288D1,stroke-width:2px,color:#fff
+style B fill:#FFD54F,stroke:#FFA000,stroke-width:2px,color:#333
+style C fill:#F06292,stroke:#C2185B,stroke-width:2px,color:#fff
+style D fill:#81C784,stroke:#388E3C,stroke-width:2px,color:#fff
+style E fill:#BA68C8,stroke:#6A1B9A,stroke-width:2px,color:#fff
+style F fill:#E57373,stroke:#B71C1C,stroke-width:2px,color:#fff
+style G fill:#AED581,stroke:#689F38,stroke-width:2px,color:#333
+style H fill:#FFF176,stroke:#FBC02D,stroke-width:2px,color:#333
+style I fill:#7986CB,stroke:#283593,stroke-width:2px,color:#fff
 ```
