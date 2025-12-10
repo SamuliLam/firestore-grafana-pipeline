@@ -73,7 +73,7 @@ graph TD
     A[IoT Sensors] -->|Publish JSON data| B[Google Cloud Pub/Sub Topics]
     B -->|Trigger events| C[Cloud Run Services]
     C -->|Parse & enrich| D[Firestore Collections]
-    C -->|Forward enriched data| E[Normalizer REST API]
+    C -->|Forward enriched live data| E[Normalizer REST API]
     D -->|Forward history data| E[Normalizer REST API]
     E -->|Process & normalize| F[SensorDataParser]
     F -->|EAV format| G[TimescaleDB]
