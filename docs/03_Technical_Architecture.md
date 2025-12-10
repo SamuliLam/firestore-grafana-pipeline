@@ -65,3 +65,26 @@ If no timestamp is provided, the system defaults to using the current ingestion 
 ---
 
 These rules ensure that a wide variety of sensor data formats can be ingested reliably while maintaining consistency within the time-series database.
+
+
+```mermaid
+graph TD
+    A[IoT Sensors] -->|Publish JSON data| B[Google Cloud Pub/Sub Topics]
+    B -->|Trigger events| C[Cloud Run Services]
+    C -->|Parse & enrich| D[Firestore Collections]
+    C -->|Forward enriched data| E[Normalizer REST API]
+    E -->|Process & normalize| F[SensorDataParser]
+    F -->|EAV format| G[TimescaleDB]
+    G -->|SQL queries| H[Grafana Dashboards]
+    H -->|Embedded iframes| I[Frontend Application]
+    
+    style A fill:#e1f5ff
+    style B fill:#fff4e1
+    style C fill:#ffe1f5
+    style D fill:#e1ffe1
+    style E fill:#f5e1ff
+    style F fill:#ffe1e1
+    style G fill:#e1f5e1
+    style H fill:#f5f5e1
+    style I fill:#e1e1ff
+```
