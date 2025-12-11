@@ -2,10 +2,8 @@ import os
 
 from google.cloud import firestore
 from src.db import insert_sensor_rows, SensorData, get_oldest_collection_timestamp_from_db
-from src.utils.SensorDataParser import SensorDataParser
+from src.SensorDataParser import SensorDataParser
 from src.utils.sync_status import sync_status
-from src.utils.SensorDataParser import POSSIBLE_TIMESTAMP_FIELDS
-
 
 # Firestore client
 project_id = os.getenv("GCP_PROJECT_ID")

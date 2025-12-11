@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, status, BackgroundTasks
 import json
 from src.db import insert_sensor_rows, init_db, SensorData, insert_sensor_metadata, delete_sensor, get_all_sensor_metadata
 from src.history_to_timescale import sync_firestore_to_timescale
-from src.utils.SensorDataParser import SensorDataParser
+from src.SensorDataParser import SensorDataParser
 from src.utils.api_response import make_response
 from src.utils.sync_status import sync_status
 from contextlib import asynccontextmanager
@@ -180,7 +180,6 @@ DATA:
 
 
 if __name__ == "__main__":
-    import uvicorn
     import subprocess
     import time
 

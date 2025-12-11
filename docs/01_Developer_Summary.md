@@ -15,7 +15,7 @@ The system is designed to be extensible, allowing new sensors, metrics, and visu
 
 - Technical Implementation Documentation  
   Describes system architecture, components, database design, and APIs.  
-  Location: docs/[03_Technical_Architecture.md](03_Technical_Architecture.md)
+  Location: docs/[03_Technical_Specification.md](03_Technical_Specification.md)
 
 - Testing Report  
   Details test cases, results, and coverage analysis.  
@@ -34,7 +34,7 @@ Implemented:
 - Visualization of sensor metadata using geo-mapping features in Grafana
 
 Out of Scope / Not Implemented:
-- User authentication and role-based access control (planned but not implemented)
+- User authentication and role-based access control for both frontend and Grafana
 - Alerting and notifications in Grafana
 
 ### 4. 
