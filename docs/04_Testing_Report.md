@@ -1,9 +1,21 @@
 ## Introduction
  This document outlines the testing procedures and results for the IoT sensor data ingestion and visualization system. The testing process aimed to ensure that all functional and non-functional requirements were met, and that the system operates reliably under various conditions.
- ## Test target and achievements
+
+## Table of Contents
+- [Test target and achievements](#test-target-and-achievements)
+- [Testing environment](#testing-environment)
+- [Test organization and coverage](#test-organization-and-coverage)
+- [Testing strategy](#testing-strategy)
+- [Tested features](#tested-features)
+- [Test cases and success criteria](#test-cases-and-success-criteria)
+- [Non-functional testing](#non-functional-testing)
+- [Special cases](#special-cases)
+- [Attributes that cant be tested](#attributes-that-cant-be-tested)
+- [Summary of test results](#summary-of-test-results)
+# Test target and achievements
 The primary targets of the testing process were to validate the following functionalities: Database working as expected, Normalizer API handles data correctly, communication between firestore and backend works smoothly. The testing process included unit tests and some integration testing.
 The testing process confirmed that the database operations, including data insertion, retrieval, and querying, functioned as intended. The Normalizer API was tested to ensure it correctly processes incoming sensor data and normalizes it into the expected format before storing it in the database. Communication between Firestore and the backend was verified to ensure that data is accurately fetched and forwarded without loss or corruption.
-## Testing environment
+# Testing environment
 The testing was done with pytest framework for backend unit tests. A local instance of TimescaleDB was used to simulate the production database environment. Mock data representing various sensor types and readings were created to test the Normalizer API and database interactions.
 The tests were executed in a controlled environment to ensure consistency and reliability of results. The testing environment included necessary dependencies and configurations to mimic the production setup as closely as possible.
 # Test organization and coverage
