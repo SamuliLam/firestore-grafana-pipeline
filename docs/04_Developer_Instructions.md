@@ -9,7 +9,7 @@
 3.  [Implemented Features / Out of Scope / Not Implemented](#3-implemented-features--out-of-scope--not-implemented)
 4.  [Instructions for Future Development](#4-instructions-for-future-development)
     * [Local installation](#local-installation)
-    * [Extending live data forwarding to other sensor categories](#-extending-live-data-forwarding-to-other-sensor-categories)
+    * [Extending live data forwarding to other sensor categories](#extending-live-data-forwarding-to-other-sensor-categories)
     * [Changing supported sensor_id or timestamp fields](#changing-supported-sensor_id-or-timestamp-fields)
     * [API Documentation](#api-documentation)
 
