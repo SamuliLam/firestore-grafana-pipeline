@@ -2,7 +2,7 @@
 
 ---
 
-## 🧭 Table of Contents
+## Table of Contents
 
 1.  [Introduction](#1-introduction)
 2.  [Project Documentation Overview](#2-project-documentation-overview)
