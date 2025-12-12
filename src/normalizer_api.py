@@ -1,13 +1,9 @@
-from fastapi import FastAPI, Request, status, BackgroundTasks
-import json
-from src.db import insert_sensor_rows, init_db, SensorData, insert_sensor_metadata, delete_sensor, get_all_sensor_metadata
-from src.history_to_timescale import sync_firestore_to_timescale
-from src.SensorDataParser import SensorDataParser
-from src.utils.api_response import make_response
-from src.utils.sync_status import sync_status
+from fastapi import FastAPI
 from contextlib import asynccontextmanager
-import datetime
 from fastapi.middleware.cors import CORSMiddleware
+
+from src.db import init_db
+from src.routers import sensors, webhook, history
 
 
 @asynccontextmanager
@@ -18,7 +14,12 @@ async def lifespan(app: FastAPI):
     print("Application shutting down")
 
 
-app = FastAPI(title="Normalizer-API", lifespan=lifespan)
+app = FastAPI(
+    title="Normalizer-API",
+    description="API for normalizing and storing sensor data",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,155 +29,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/health")
+
+# Health check endpoint
+@app.get("/health", tags=["health"])
 async def health_check():
+    """Check if the API is running"""
     return {"status": "ok"}
 
-@app.post("/api/sensors")
-async def add_sensor(request: Request):
-    try:
-        data = await request.json()
-        insert_sensor_metadata([data])
-    except Exception as e:
-        print("Error:", e)
-        return make_response(
-            status="error",
-            message=str(e),
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
 
-    return make_response(
-        status="success",
-        message="Sensor added successfully",
-        data=data,
-        status_code=status.HTTP_201_CREATED
-    )
-
-
-
-@app.post("/webhook")
-async def firestore_webhook(request: Request):
-
-    try:
-        data = await request.json()
-    except json.JSONDecodeError as e:
-        return make_response(
-            status="error",
-            message=str(e),
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
-
-    try:
-        parser = SensorDataParser(data.get("sensor_type"))
-        sensor_reading_rows = parser.process_raw_sensor_data(data)
-
-        if not sensor_reading_rows:
-            return make_response(
-                status="error",
-                message="Message didn't contain valid sensor data",
-                status_code=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Insert into database
-        insert_sensor_rows(SensorData, sensor_reading_rows)
-
-        log_webhook(data, len(sensor_reading_rows))
-
-    except Exception as e:
-        print(f"Webhook error: {e}")
-        return make_response(
-            status="error",
-            message=str(e),
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-    return make_response(
-        status="success",
-        message="New data successfully inserted to the database",
-        data=data,
-        status_code=201
-    )
-
-@app.delete("/api/sensors/{sensor_id}")
-async def delete_sensor_from_db(sensor_id: str):
-    try:
-        deleted = delete_sensor(sensor_id)
-
-        if deleted == 0:
-            return make_response(
-                status="error",
-                message=f"Sensor {sensor_id} not found",
-                status_code=404
-            )
-
-        return make_response(
-            status="success",
-            message=f"Sensor {sensor_id} deleted",
-            status_code=200
-        )
-
-    except Exception as e:
-        return make_response(
-            status="error",
-            message=str(e),
-            status_code=500
-        )
-
-@app.post("/api/history")
-async def sync_history(background_tasks: BackgroundTasks):
-    background_tasks.add_task(sync_firestore_to_timescale)
-    return make_response(
-        status="accepted",
-        message="History synchronization started in background",
-        status_code=202
-    )
-
-@app.get("/api/history/status")
-async def get_history_sync_status():
-    return {
-        "state": sync_status["state"],
-        "error": sync_status["error"]
-    }
-
-
-@app.get("/api/sensor_metadata")
-async def get_sensor_metadata():
-    try:
-        metadata = get_all_sensor_metadata()
-    except Exception as e:
-        return make_response(
-            status="error",
-            message=str(e),
-            status_code=500
-        )
-
-    return make_response(
-        status="success",
-        message="Sensor metadata retrieved successfully",
-        data=metadata,
-        status_code=200
-    )
-
-
-
-def log_webhook(data: dict, rows_count: int):
-    """Log webhook requests to a file for debugging."""
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_message = f"""
-{'=' * 80}
-TIMESTAMP: {timestamp}
-ROWS STORED: {rows_count}
-{'=' * 80}
-DATA:
-{json.dumps(data, indent=2)}
-{'=' * 80}
-"""
-    try:
-        with open("webhook_logs.txt", "a") as f:
-            f.write(log_message)
-        print(log_message)
-    except Exception as e:
-        print(f"Failed to write log: {str(e)}")
+# Include routers
+app.include_router(sensors.router)
+app.include_router(webhook.router)
+app.include_router(history.router)
 
 
 if __name__ == "__main__":
@@ -185,7 +49,7 @@ if __name__ == "__main__":
 
     print("Starting FastAPI server...")
     server_process = subprocess.Popen([
-        'uvicorn', 'normalizer_api:app', '--host', '0.0.0.0', '--port', '8000', '--reload'
+        'uvicorn', 'normalizer_api:app', '--host', '0.0.0.0', '--port', '8080', '--reload'
     ])
     time.sleep(2)
     if server_process.poll() is not None:
@@ -193,11 +57,9 @@ if __name__ == "__main__":
         exit(1)
     print("FastAPI server started!")
     try:
-        # Keep the server running
         server_process.wait()
     except KeyboardInterrupt:
         print("\nShutting down...")
         server_process.terminate()
         server_process.wait()
         print("Shutdown complete")
-

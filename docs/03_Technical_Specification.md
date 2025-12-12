@@ -378,3 +378,53 @@ This implies that for seamless historical data loading, sensor data stored in Fi
 The backend also provides endpoints to manage sensor metadata stored in the `sensor_metadata` table. This table holds static information about each sensor, such as sensor identifier, geographic coordinates (latitude and longitude), and sensor category.
 
 Sensor metadata is used primarily for geographic visualization of sensors on maps within the frontend application.
+
+
+
+## 6. Docker
+
+### 6.1 Overview
+
+Docker is used to containerize key backend components and Grafana to provide consistent, isolated, and portable deployment environments. The frontend application is **not** containerized and is deployed separately.
+
+### 6.2 Containerized Services
+
+The main services containerized with Docker are:
+
+- **TimescaleDB**  
+  Runs the time-series database using the official TimescaleDB image (PostgreSQL 17-based). It uses persistent volumes for data durability and initializes the database with a custom SQL script. Health checks ensure the database is ready before dependent services start.
+
+- **Normalizer API**  
+  The backend normalization service built from the project source using a Dockerfile. Runs on Uvicorn, exposing port 8080. Configured via environment variables for database connection, Google Cloud credentials, and Firestore collections. The source code is volume-mounted for live reload during development. Depends on TimescaleDB availability.
+
+- **Grafana**  
+  Visualization service running from the official Grafana image. It exposes port 3000 and is configured with admin credentials and pre-provisioned dashboards. Persistent volumes store Grafana data and configurations. Depends on TimescaleDB being healthy.
+
+### 6.3 Docker Compose Orchestration
+
+The services are orchestrated using Docker Compose, which manages service dependencies, networking, and volume mounting. This setup ensures services start in the correct order, for example, the Normalizer API and Grafana wait until TimescaleDB is healthy before launching.
+
+### 6.4 Running the Stack
+
+Common Docker Compose commands for managing the environment:
+```bash
+docker-compose up       # Start all services
+docker-compose down     # Stop all services (volumes remain)
+```
+
+### 6.5 Environment Configuration
+
+Environment variables are used to configure sensitive information and service parameters such as:
+
+- Database credentials and connection URLs
+- Google Cloud service account credentials
+- Firestore collection names
+- Grafana admin user credentials
+
+These are typically provided via a `.env` file or injected by the deployment platform.
+
+### 6.6 Notes and Development Workflow
+
+- The backend service source code is mounted as a volume in the container to enable live reloading during development.
+- Persistent Docker volumes ensure that database and Grafana data survive container restarts and updates.
+- The frontend application is deployed separately and is not part of the Docker container ecosystem.
