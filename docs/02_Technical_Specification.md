@@ -387,6 +387,7 @@ Sensor metadata is used primarily for geographic visualization of sensors on map
 # 4. Frontend
 
 This part of the document describes how the frontend interacts with the backend, what technologies the frontend uses, and information about the components the frontend uses. The frontend is responsible for receiving and sending requests to the backend depending on what the user wants to do.
+The frontend is built using **React** and **TypeScript**. The project uses **Vite** as the build tool.
 
 ---
 
