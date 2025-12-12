@@ -62,7 +62,7 @@ The system is designed to be extensible, allowing new sensors, metrics, and visu
 ### Local installation:
 For instructions on setting up the project locally, please refer to the Installation and User Guide located at: [README.md](../README.md)
 
-### ⚙️ Extending live data forwarding to other sensor categories:
+### Extending live data forwarding to other sensor categories:
 
 To enable forwarding behavior for additional sensor categories, the corresponding Cloud Run services must be configured in the following way:
 
