@@ -194,7 +194,7 @@ This structure allows the project to ingest data from entirely new sensor types 
 
 To avoid data redundancy, static information about sensors is separated from the high-volume measurement data. The `sensor_metadata` table acts as a relational lookup table containing:
 
-- **sensor_id:** Primary key, linking to `sensor_data` table
+- **sensor_id:** Primary key of sensor Metadata table
 - **latitude / longitude:** Coordinates for Grafana visualization
 - **sensor_type:** category of sensor
 
