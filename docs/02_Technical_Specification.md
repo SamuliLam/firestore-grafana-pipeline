@@ -581,7 +581,7 @@ Environment variables are used to configure sensitive information and service pa
 - Firestore collection names
 - Grafana admin user credentials
 
-These are typically provided via a `.env` file or injected by the deployment platform.
+These are provided via a `.env` file.
 
 ### 6.6 Notes and Development Workflow
 
