@@ -85,6 +85,12 @@ echo "{}" > docker/secrets/normalizer-sa.json
 ```
 **Important:** For Firestore integration, replace `docker/secrets/normalizer-sa.json` with your Google Cloud service account JSON file.
 
+#### Environment Variable Setup
+
+1.  **Rename** the example file: `cp .env.example .env`
+2.  **Edit** the `.env` file and set the correct values for your environment (e.g., database passwords, port numbers).
+
+
 ### Step 3: Start Docker Services
 
 ```bash
