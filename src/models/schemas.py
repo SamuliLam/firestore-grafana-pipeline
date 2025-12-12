@@ -1,32 +1,28 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Any, Optional
 
 
 class ApiResponse(BaseModel):
     """Standard API response format"""
-    status: str = Field(..., description="Response status")
-    message: str = Field(..., description="Response message")
-    data: Optional[Any] = Field(None, description="Response data")
-
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "success",
                 "message": "Operation completed successfully",
                 "data": {}
             }
         }
+    )
+
+    status: str = Field(..., description="Response status")
+    message: str = Field(..., description="Response message")
+    data: Optional[Any] = Field(None, description="Response data")
 
 
 class SensorMetadataInput(BaseModel):
     """Input model for creating/updating sensor metadata"""
-    sensor_id: str = Field(..., description="Unique identifier for the sensor")
-    latitude: float = Field(..., description="Latitude coordinate")
-    longitude: float = Field(..., description="Longitude coordinate")
-    sensor_type: str = Field(..., description="Type of sensor")
-
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "sensor_id": "sensor_001",
                 "latitude": 60.1699,
@@ -34,15 +30,19 @@ class SensorMetadataInput(BaseModel):
                 "sensor_type": "viherpysakki"
             }
         }
+    )
+
+    sensor_id: str = Field(..., description="Unique identifier for the sensor")
+    latitude: float = Field(..., description="Latitude coordinate")
+    longitude: float = Field(..., description="Longitude coordinate")
+    sensor_type: str = Field(..., description="Type of sensor")
 
 
 class WebhookData(BaseModel):
     """Flexible model for incoming webhook sensor data"""
-    sensor_type: str = Field(..., description="Type of sensor")
-
-    class Config:
-        extra = "allow"  # Allow additional fields for flexible sensor data
-        json_schema_extra = {
+    model_config = ConfigDict(
+        extra="allow",  # Allow additional fields for flexible sensor data
+        json_schema_extra={
             "example": {
                 "sensor_type": "viherpysakki",
                 "sensor_id": "sensor_001",
@@ -51,3 +51,6 @@ class WebhookData(BaseModel):
                 "humidity": 65.0
             }
         }
+    )
+
+    sensor_type: str = Field(..., description="Type of sensor")
