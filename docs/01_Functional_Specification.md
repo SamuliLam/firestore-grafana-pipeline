@@ -33,6 +33,7 @@ Clicking a sensor in the list navigates the user to a detailed view showing the 
 
 In the center of the website’s navigation bar is the *“Sensors”* section, which leads to the general sensor overview. In this overview, the user first selects the category of sensors they want to inspect. After selecting a category, SensorID-based filtering is available. Once a category is selected, temperature, humidity, and—if available—air pressure data is displayed, each with its own graph for the chosen time range. Below the graphs is a dashboard showing the median, average, standard deviation, and latest measurement for each metric. Under the dashboard is a table listing the collected sensor data, and at the bottom is the database information from which the data was retrieved.
 
+It is important to set the correct error message and use guiding colors to make the website easy to use. Generally the website uses the color red for errors and if something was done successfully a green text is displayed. When submitting a form in the AddSensor or RemoveSensor panels these errors can appear depending on the user input.
 # 4. User Requirements
 
 User requirements for the project are as follows:
