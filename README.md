@@ -5,8 +5,7 @@
 2. [Local Installation](#local-installation)
 3. [VM Installation (Ubuntu)](#vm-installation)
 4. [User Guide](#user-guide)
-5. [API Reference](#api-reference)
-6. [Troubleshooting](#troubleshooting)
+5. [Troubleshooting](#troubleshooting)
 
 ---
 
