@@ -56,6 +56,7 @@ The system is designed to be extensible, allowing new sensors, metrics, and visu
 * User authentication and role-based access control for both frontend and Grafana
 * Alerting and notifications in Grafana
 * Historical data synchronization for nested firestore collections (example: `sensor_category/zone1/sensorA`)
+* Responsive frontend that is supported by differenct screen sizes
 
 ## 4. Instructions for Future Development
 
