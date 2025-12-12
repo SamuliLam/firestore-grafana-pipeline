@@ -1,5 +1,8 @@
 # IoT Sensor Data Ingestion and Processing System
 
+
+
+
 ## 1. In-Depth Data Ingestion Workflow
 
 
@@ -380,6 +383,160 @@ This implies that for seamless historical data loading, sensor data stored in Fi
 The backend also provides endpoints to manage sensor metadata stored in the `sensor_metadata` table. This table holds static information about each sensor, such as sensor identifier, geographic coordinates (latitude and longitude), and sensor category.
 
 Sensor metadata is used primarily for geographic visualization of sensors on maps within the frontend application.
+
+# 4. Frontend
+
+This part of the document describes how the frontend interacts with the backend, what technologies the frontend uses, and information about the components the frontend uses. The frontend is responsible for receiving and sending requests to the backend depending on what the user wants to do.
+
+---
+
+## 4.1 UI components
+
+A lot of the components that are used are from the **Shadcn UI component library**. We used a component library because we wanted to make the UI consistent and use the same kind of styling for components. The used UI components are imported in the **`src/components/ui`** folder.
+
+---
+
+## 4.2 Components
+
+Our own created components are in the **`src/components`** folder. All of these components are used in the homepage. Only the **Dashboard** component is used on the other pages since the other pages only display dashboards from Grafana.
+
+### Component List:
+* `AddSensor`
+* `Dashboard`
+* `HoverSlideAnimation`
+* `LoadHistory`
+* `RemoveSensor`
+
+The biggest components are `AddSensor`, `LoadHistory`, and `RemoveSensor`. `Dashboard` and `HoverSlideAnimation` are both under 20 lines of code. The `Dashboard` component is used to show data from Grafana.
+
+The **Homepage** is the main page of the website, but it also has **Individual sensor view** and **Multiple sensor view**. These sensor view pages don’t really use any functions or logic inside React, so the main talking point will be the home page.
+
+Our components use a **`refreshKey`** attribute so the components can be individually refreshed and not the entire webpage. More on that later.
+
+### 4.2.1 Component Structure
+
+This section will detail the structure that is used for the three big components (`AddSensor`, `LoadHistory`, and `DeleteSensor`).
+
+In this example, `AddSensor` is used, but the main structure is the same with the other components.
+
+1.  **Imports:** The components import everything needed at the start, including the Shadcn components.
+2.  **Function Definition:** Next, there is `export function` followed by the function name.
+3.  **State Management:** Inside the function, there is a lot of **`useState`**, which is a React hook that is very useful for managing different states for the component. `useState` hooks are also phenomenal for checking if the submitted form is valid and generally setting errors.
+4.  **Backend Communication:** Then there is an **asynchronous function** that is used to communicate with the backend. Inside the asynchronous function, errors and error messages are set depending on the user input. For communicating with the backend, **`fetch`** requests that send or receive the JSON payloads are used.
+
+#### Example Request Structure:
+
+A typical request starts with **`await`**, which makes the function wait until a promise is resolved or rejected. The endpoint is set as the same as in the backend. `API_BASE_URL` is located inside an `.env` file.
+
+```javascript
+await fetch(`${API_BASE_URL}/api/sensors`, {
+    method: 'POST', // Example method
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+});
+```
+In this request, we use **POST** because we want to add a sensor to the map. In the header/body, it tells what kind of content we want to send to the backend.
+
+### Success/Failure Handling:
+
+We wait for the result of the request, and depending on if the request has failed or succeeded, different things are done.
+
+* If it somehow **failed**, we set the appropriate error messages and inform the user.
+* If it **succeeds**, we refresh the form and tell the user it succeeded.
+
+There are also some `console.log` statements that help to debug things in the code, like here where it tells if a sensor was successfully added.
+
+### Component Rendering:
+
+After the backend request, there is the actual component that gets rendered on the webpage.
+```javascript
+    <div className="add-sensor-panel p-4 border rounded-lg shadow-sm bg-white dark:bg-gray-800">
+        <FieldLegend className="text-lg font-semibold mb-4">Add New Sensor</FieldLegend>
+
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <div className="flex flex-col">
+                <FieldLabel htmlFor="sensor_id" className="mb-1 font-medium">Sensor ID</FieldLabel>
+                <Input type="text"
+                       id="sensor_id"
+                       name="sensorId"
+                       value={sensorId}
+                       onChange={(e) => setSensorId(e.target.value)}
+                       className="border rounded px-3 py-2"
+                       placeholder="Enter Sensor ID"/>
+            </div>
+            {errors.sensorId && <p className="text-red-500 text-sm">{errors.sensorId}</p>}
+```
+This is where the form starts, and you can see some of the Shadcn components like **`Input`**, **`FieldLegend`**, and **`FieldLabel`**. There is also the **`handleSubmit`** function which is called when submitting the form using a button.
+
+The **`onChange`** attribute sets the `sensorId` using `useState`. This same structure is used for all of the input fields. If there is some kind of error, it is displayed under the input field.
+
+At the end of the form, there is a button. Pressing the button triggers different things depending on the `useStates`. If everything went well, the `sensorAdded` `useState` should be **true** and it displays a **green message**, and if `sensorAddFailed` is true, it displays **red text** with other errors that were encountered.
+
+---
+
+## 4.3 Refresh key
+
+The **`refreshKey`** is a key feature that makes the website more seamless to use. The `refreshKey` is used to refresh the dashboard when making changes to the sensors by adding or removing them. Inside the Dashboard component we give it the following attributes:
+
+```javascript
+export const Dashboard = ({ dsb_link, styles, refreshKey = 0 }: DashboardProps) => {
+    const defaultClasses = "grow rounded-md shadow-light-shadow-sm"
+
+    return (
+        <iframe
+            key={String(refreshKey)}
+            title="Dashboard"
+            src={dsb_link}
+            className={ `${defaultClasses} ${styles}`}>
+        </iframe>
+    )
+}
+```
+Here you can see the key attribute given the refreshkey. Changing the component’s key forces React to unmount and remount the element. So when the key changes the old iframe is discarded and the fresh one is created in its place.
+
+In the homepage we have a function that adds +1 to the previous refreshkey, making the value change thus refreshing the dashboard. Below are the main parts that make the refresh key work on the homepage.
+
+1. Function that changes the value of refreshkey
+```javascript
+    const refreshEverything = () => {
+    setDashboardRefreshKey(prev => prev + 1);
+
+    queryClient.invalidateQueries({
+        queryKey: ["sensor_metadata"],
+    });
+};
+```
+2. Actions that trigger the refreshkey to change.
+```javascript
+    <AddSensor refreshKey={dashboardRefreshKey} onSensorAdded={refreshEverything}/>
+    <RemoveSensor refreshKey={dashboardRefreshKey} onSensorRemoved={refreshEverything}/>
+```
+3. Refreshkey changing when refreshEverything called.
+```javascript
+<Dashboard
+    styles="w-full"
+    dsb_link={map_dsb}
+    refreshKey={dashboardRefreshKey}
+/>
+```
+### 4.4 Search function 
+Homepage also includes a search function to find sensors in the dashboard. Inside the project is React context that stores searchValue that has the current text the user typed and a function that updates it using useState. In our home page there is a useSearch() hook that gives the real-time value of the search text.
+```javascript
+const { searchValue } = useSearch();
+```
+The search actually becomes functional when the DataTable function gets the search value
+```javascript
+<DataTable
+    columns={columns}
+    data={data ?? []}
+    searchFilter={searchValue}
+    onRowClick={handleRowClick}
+/>
+```
+The DataTable receives the sensor data and the current search value. Every time the searchValue changes the DataTable re-renders, filtering out the values we want and what we don’t want. The DataTable is a component that is made to filter out values based on sensorId. So typing a sensorId you want to search for will pop in the list of values under the map.
+
 
 
 
