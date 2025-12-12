@@ -1,15 +1,15 @@
 # Functional Specification - Sensor Data Visualization Application
 
 # Table of Contents
-- [1. Introduction](#1-introduction)
-- [2. Glossary](#2-glossary)
-- [3. Use Cases / Overview](#3-use-cases--overview)
-- [4. User Requirements](#4-user-requirements)
-- [5. System Architecture](#5-system-architecture)
-- [6. System Requirements](#6-system-requirements)
-  - [6.1 Functional Requirements](#61-functional-requirements)
-  - [6.2 Non-Functional Requirements](#62-non-functional-requirements)
-- [7. Flowchart](#7-flowchart)
+1. [Introduction](#1-introduction)
+2. [Glossary](#2-glossary)
+3. [Use Cases / Overview](#3-use-cases--overview)
+4. [User Requirements](#4-user-requirements)
+5. [System Architecture](#5-system-architecture)
+6. [System Requirements](#6-system-requirements)
+   * [Functional Requirements](#61-functional-requirements)
+   * [Non-Functional Requirements](#62-non-functional-requirements)
+7. [Flowchart](#7-flowchart)
 
 # 1. Introduction
 
@@ -25,7 +25,7 @@ The purpose of the application is to view sensor values and allow the user to ad
 
 # 3. Use Cases / Overview
 
-The application runs on a Virtual Machine (VM) on the client’s computer. The program requires both the frontend and backend to be running. Once these are active, the user can open a browser and go to the website. The VM is accessed via a VPN connection. The VPN requires logging in with Metropolia credentials.
+The application is designed to run on a Virtual machine (VM). The program requires both the frontend and backend to be running. Once these are active, the user can open a browser and go to the website. The VM is accessed via a VPN connection. The VPN requires logging in with Metropolia credentials.
 
 The application is used to visualize sensor data and provides multiple ways to review the information received from sensors. The homepage features a map showing sensor locations, along with a list of sensors displayed under the map. On the left side of the map, a panel allows users to add or delete sensors. Above the map, the *“Load history”* button retrieves historical sensor data from the database. A search field for SensorID is located in the upper-right corner of the page. Entering a string filters the sensor list below the map to show only sensors whose ID contains the entered characters, helping users find sensors easily.
 
