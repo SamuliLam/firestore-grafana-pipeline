@@ -7,7 +7,7 @@ from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 
 # Import the module to test
-from src.utils.SensorDataParser import (
+from src.SensorDataParser import (
     SensorDataParser,
     extract_sensor_and_metrics,
     _value_looks_nested,
@@ -37,7 +37,7 @@ class TestSensorDataParser:
 
     def test_simple_flat_data(self, parser, fixed_time):
         """Test processing flat sensor data with all fields"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "sensor001",
                 "timestamp": "2024-01-15T12:00:00",
@@ -55,7 +55,7 @@ class TestSensorDataParser:
 
     def test_nested_data_with_sensor_key(self, parser, fixed_time):
         """Test processing nested data where key is sensor ID"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_123": {
                     "temperature": [20.0, 21.0, 22.0],
@@ -186,7 +186,7 @@ class TestSensorDataParser:
 
     def test_sensor_id_field_variants(self, parser, fixed_time):
         """Test that different sensor ID field names are recognized"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             for field in POSSIBLE_SENSOR_ID_FIELDS:
                 raw_data = {
                     field: "test_sensor",
@@ -209,7 +209,7 @@ class TestSensorDataParser:
 
     def test_sensor_type_from_item(self, parser, fixed_time):
         """Test that sensor_type is taken from item if present"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "test_sensor",
                 "sensor_type": "custom_type",
@@ -220,7 +220,7 @@ class TestSensorDataParser:
 
     def test_sensor_type_defaults_to_collection(self, parser, fixed_time):
         """Test that sensor_type defaults to collection name"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "test_sensor",
                 "temperature": 23.5
@@ -230,7 +230,7 @@ class TestSensorDataParser:
 
     def test_array_of_sensor_readings(self, parser, fixed_time):
         """Test processing array of sensor readings"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = [
                 {"sensor_id": "sensor_001", "temperature": 20.0},
                 {"sensor_id": "sensor_002", "temperature": 21.0}
@@ -255,7 +255,7 @@ class TestSensorDataParser:
 
     def test_colon_removal_from_sensor_id(self, parser, fixed_time):
         """Test that colons are removed from sensor IDs"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "AA:BB:CC:DD",
                 "temperature": 23.5
@@ -368,7 +368,7 @@ class TestEdgeCases:
 
     def test_multiple_metrics_with_lists(self, parser, fixed_time):
         """Test processing multiple list metrics"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "sensor_001",
                 "temperature": [20.0, 21.0, 22.0],
@@ -384,7 +384,7 @@ class TestEdgeCases:
 
     def test_mixed_metric_types(self, parser, fixed_time):
         """Test processing mix of scalar and list metrics"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "sensor_001",
                 "temperature": [20.0, 21.0],
@@ -397,7 +397,7 @@ class TestEdgeCases:
 
     def test_invalid_timestamp_format(self, parser, fixed_time):
         """Test handling of invalid timestamp format"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "sensor_001",
                 "timestamp": "not a valid timestamp",
@@ -409,7 +409,7 @@ class TestEdgeCases:
 
     def test_special_characters_in_sensor_id(self, parser, fixed_time):
         """Test sensor IDs with special characters"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "sensor::001::AA",
                 "temperature": 23.5
@@ -420,7 +420,7 @@ class TestEdgeCases:
 
     def test_very_large_list(self, parser, fixed_time):
         """Test processing very large list of values"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             large_list = list(range(100))
             raw_data = {
                 "sensor_id": "sensor_001",
@@ -431,7 +431,7 @@ class TestEdgeCases:
 
     def test_unicode_in_sensor_id(self, parser, fixed_time):
         """Test sensor IDs with unicode characters"""
-        with patch('src.utils.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
+        with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "sensor_ñ_001",
                 "temperature": 23.5
