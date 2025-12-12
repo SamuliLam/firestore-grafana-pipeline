@@ -1,3 +1,16 @@
+# Functional Specification - Sensor Data Visualization Application
+
+# Table of Contents
+- [1. Introduction](#1-introduction)
+- [2. Glossary](#2-glossary)
+- [3. Use Cases / Overview](#3-use-cases--overview)
+- [4. User Requirements](#4-user-requirements)
+- [5. System Architecture](#5-system-architecture)
+- [6. System Requirements](#6-system-requirements)
+  - [6.1 Functional Requirements](#61-functional-requirements)
+  - [6.2 Non-Functional Requirements](#62-non-functional-requirements)
+- [7. Flowchart](#7-flowchart)
+
 # 1. Introduction
 
 The purpose of the application is to view sensor values and allow the user to add and remove sensors. Sensors are visualized on a map, and the data they produce is displayed using various metrics such as average and median. Graphs are also created from the data, making it easy to examine values collected over a selected time period. The product is a web-based application.
