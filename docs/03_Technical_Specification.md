@@ -2,152 +2,154 @@
 
 ## 1. In-Depth Data Ingestion Workflow
 
+
 This section describes the data ingestion workflow used by the system, from the point where sensor data is produced to the point where it is forwarded for normalization and further processing.
+
 
 ### 1.1 Sensor Data Publishing
 
+
 IoT sensors produce measurement data such as temperature, humidity, and air pressure.
+
 
 - Sensors are grouped into predefined sensor categories, where each category represents a specific type of sensor.
 - Each sensor category publishes data to its own Google Cloud Pub/Sub topic. The published messages contain measurement data for individual sensors, encoded as JSON payloads.
 
+
 ### 1.2 Pub/Sub Subscription and Event Triggering
+
 
 - Each Pub/Sub topic has a corresponding subscriber.
 - When new data is published to the topic, the subscriber triggers a cloud-based processing service.
 - This event acts as the entry point to the data ingestion workflow.
 
+
 ### 1.3 Cloud Run Service per Sensor Category
 
+
 For each sensor category, a Google Cloud Run service processes the incoming Pub/Sub events.
+
 
 Each service executes the same type of trigger logic, but is configured using environment variables to handle:
 - a specific sensor category
 - the corresponding Firestore collection
 
+
 When an event is received, the Cloud Run service begins processing the payload.
+
 
 ### 1.4 Message Parsing and Data Preparation
 
+
 The Cloud Run service that subscribes to the Pub/Sub topic performs the following steps for each incoming message:
+
 
 1. Decode the Pub/Sub message payload (base64).
 2. Parse the JSON content into a structured object/dictionary.
 3. Extract the sensor identifier (`sensor_id`) and the measurement values (metrics).
 4. Attach minimal metadata required for downstream processing.
 
+
 #### Enrichment rule
+
 
 The incoming raw data already contains the `sensor_id` field. The enrichment step adds only a `sensor_type` field that identifies the sensor category (for example, `ymparistomoduuli`).
 
+
 The enriched object (raw data + `sensor_type`) is used for forwarding to the Normalizer API. This enriched object is not written to Firestore.
+
 
 **Example of the typical data structure after parsing and enrichment:**
 ```json
 {
-  "sensor_id": "ABC123",
-  "temperature": 21.4,
-  "humidity": 55.1,
-  "timestamp": "2024-06-15T12:34:56Z",
-  "sensor_type": "viherpysakki"
+ "sensor_id": "ABC123",
+ "temperature": 21.4,
+ "humidity": 55.1,
+ "timestamp": "2024-06-15T12:34:56Z",
+ "sensor_type": "viherpysakki"
 }
 ```
 
+
 ### 1.5 Writing Data to Firestore
 
+
 After parsing (and independently of forwarding to the Normalizer API), the service writes the original parsed data into Firestore:
+
 
 - Each sensor category uses its own Firestore collection (collection name corresponds to `sensor_type`).
 - Documents are created using a deterministic document id that includes the sensor identifier and a timestamp (e.g., `{sensor_id}_{YYYY-MM-DD-HH:MM:SS}`).
 - Firestore acts as a storage layer for raw and near-real-time sensor events prior to final normalization and long-term analytical storage.
 
+
 **Important:** The document written to Firestore contains the parsed raw sensor data (including `sensor_id`) but does not include the `sensor_type` enrichment that is forwarded to the Normalizer API. Forwarding and Firestore writes are separate actions performed by the Cloud Run service.
+
 
 ### 1.6 Forwarding Data to the Normalization API
 
+
 In addition to being stored in Firestore, the Cloud Run service forwards the enriched sensor data to the system's Normalizer REST API. The API endpoint is provided to the Cloud Run service through environment variables. The forwarded payload contains the original parsed measurement values together with the added `sensor_type` metadata, which identifies the sensor category.
+
 
 #### 1.6.1 Current Forwarding Scope
 
+
 At the time of writing, forwarding sensor data to the Normalizer REST API is implemented only for the environmental module sensor category (`ymparistomoduuli`). For that Cloud Run deployment, the service is configured with the following environment variable:
 ```
-NORMALIZER_API_URL=<url to the Normalizer API>
+NORMALIZER_API_URL=<url to the Normalizer API webhook endpoint>
 ```
+
 
 When `NORMALIZER_API_URL` is set, the Cloud Run service will POST the enriched data object (original parsed fields + `sensor_type`) to the Normalizer API endpoint.
 
-#### 1.6.2 Extending Forwarding to Other Sensor Categories
-
-To enable the same forwarding behavior for additional sensor categories, the corresponding Cloud Run services must be configured in the same way:
-
-1. Add the `NORMALIZER_API_URL` environment variable to the Cloud Run service configuration for the category
-2. Set its value to the Normalizer API URL
-3. Include the API forwarding logic in the service's source code
-
-**Including the API forwarding logic in the service's source code — example:**
-
-Below is an example of the forwarding snippet that services should include. It assumes the service already has parsed the incoming data into a `data` dictionary and that `COLLECTION` contains the sensor category name. The snippet creates an `enriched_doc` containing the `sensor_type` and posts it to the Normalizer API if `NORMALIZER_API_URL` is configured:
-```python
-import requests
-
-# enriched_doc: original parsed data (contains sensor_id) plus sensor_type
-enriched_doc = dict(data)
-enriched_doc.update({"sensor_type": COLLECTION})
-
-if NORMALIZER_API_URL:
-    try:
-        print(f"Sending data to {NORMALIZER_API_URL}: {enriched_doc}")
-        r = requests.post(NORMALIZER_API_URL, json=enriched_doc, timeout=10)
-        r.raise_for_status()
-    except requests.exceptions.Timeout:
-        print("Normalizer API request timed out")
-    except requests.exceptions.ConnectionError as e:
-        print(f"Connection error: {e}")
-    except requests.exceptions.HTTPError as e:
-        print(f"HTTP error: {e.response.status_code} - {e.response.text}")
-    except requests.exceptions.RequestException as e:
-        print(f"General request error: {e}")
-else:
-    print("WARNING: NORMALIZER_API_URL not set")
-```
-
-Once the environment variable and the forwarding logic are in place for a Cloud Run service, that service will forward enriched sensor events to the Normalizer API following the same workflow used by the environmental module.
 
 ### 1.7 Data Reception in the Normalizer API
 
+
 When sensor data is forwarded from a Cloud Run service, it is received by the Normalizer REST API via the `/webhook` endpoint.
+
 
 The API is responsible for validating, normalizing, and transforming incoming sensor data into a consistent internal format before it is persisted to the database. The incoming payload is expected to include both the raw sensor measurements and the `sensor_type` field, which identifies the sensor category from which the data originates.
 
+
 ### 1.8 Sensor Data Normalization
+
 
 Once the data is received, it is processed by the `SensorDataParser` component. The core normalization logic is implemented in the `process_raw_sensor_data` method.
 
+
 This method iterates through the incoming payload and applies the following high-level steps:
+
 
 1. extracts and cleans the sensor identifier
 2. resolves the timestamp (either from the payload or a generated default)
 3. identifies metric fields dynamically
 4. converts the input into an Entity–Attribute–Value (EAV) representation
 
+
 The output of the normalization process is a list of dictionaries, each representing a single sensor metric observation in a normalized format. Each entry follows the structure:
 ```python
 {
-    "timestamp": timestamp,
-    "sensor_id": clean_sensor_id,
-    "metric_name": metric_name,
-    "metric_value": metric_value,
-    "sensor_type": sensor_type,
+   "timestamp": timestamp,
+   "sensor_id": clean_sensor_id,
+   "metric_name": metric_name,
+   "metric_value": metric_value,
+   "sensor_type": sensor_type,
 }
 ```
 
+
 This EAV-based structure ensures flexibility in handling heterogeneous sensor data while maintaining a consistent database schema.
+
 
 ### 1.9 Data Persistence and Visualization
 
+
 The normalized sensor data entries are persisted using the `insert_sensor_rows` method, which inserts the generated rows into the `SensorData` table in the TimescaleDB database.
 
+
 TimescaleDB serves as the primary data source for Grafana. Prebuilt and provisioned Grafana dashboards query the database directly using SQL to visualize sensor metrics over time.
+
 
 In the frontend application, these Grafana dashboards are embedded using iframes. This allows users to interactively explore sensor data, inspect historical trends, and monitor changes in metric values through a unified user interface.
 
