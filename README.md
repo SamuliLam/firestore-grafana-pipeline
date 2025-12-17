@@ -6,6 +6,7 @@
 3. [VM Installation (Ubuntu)](#vm-installation)
 4. [User Guide](#user-guide)
 5. [Troubleshooting](#troubleshooting)
+6. [Documentation](#documentation)
 
 ---
 
@@ -395,5 +396,8 @@ location /grafana/ {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
+
+## Documentation
+For detailed project documentation, refer to the [docs folder](https://github.com/SamuliLam/firestore-grafana-pipeline/tree/main/docs).
 
 *Last updated: December 2025*
