@@ -1,15 +1,15 @@
 # Functional Specification - Sensor Data Visualization Application
 
 # Table of Contents
-- [1. Introduction](#1-introduction)
-- [2. Glossary](#2-glossary)
-- [3. Use Cases / Overview](#3-use-cases--overview)
-- [4. User Requirements](#4-user-requirements)
-- [5. System Architecture](#5-system-architecture)
-- [6. System Requirements](#6-system-requirements)
-  - [6.1 Functional Requirements](#61-functional-requirements)
-  - [6.2 Non-Functional Requirements](#62-non-functional-requirements)
-- [7. Flowchart](#7-flowchart)
+1. [Introduction](#1-introduction)
+2. [Glossary](#2-glossary)
+3. [Use Cases / Overview](#3-use-cases--overview)
+4. [User Requirements](#4-user-requirements)
+5. [System Architecture](#5-system-architecture)
+6. [System Requirements](#6-system-requirements)
+   * [Functional Requirements](#61-functional-requirements)
+   * [Non-Functional Requirements](#62-non-functional-requirements)
+7. [Flowchart](#7-flowchart)
 
 # 1. Introduction
 
@@ -25,7 +25,7 @@ The purpose of the application is to view sensor values and allow the user to ad
 
 # 3. Use Cases / Overview
 
-The application runs on a Virtual Machine (VM) on the client’s computer. The program requires both the frontend and backend to be running. Once these are active, the user can open a browser and go to the website. The VM is accessed via a VPN connection. The VPN requires logging in with Metropolia credentials.
+The application is designed to run on a Virtual machine (VM). The program requires both the frontend and backend to be running. Once these are active, the user can open a browser and go to the website. The VM is accessed via a VPN connection. The VPN requires logging in with Metropolia credentials.
 
 The application is used to visualize sensor data and provides multiple ways to review the information received from sensors. The homepage features a map showing sensor locations, along with a list of sensors displayed under the map. On the left side of the map, a panel allows users to add or delete sensors. Above the map, the *“Load history”* button retrieves historical sensor data from the database. A search field for SensorID is located in the upper-right corner of the page. Entering a string filters the sensor list below the map to show only sensors whose ID contains the entered characters, helping users find sensors easily.
 
@@ -33,6 +33,7 @@ Clicking a sensor in the list navigates the user to a detailed view showing the 
 
 In the center of the website’s navigation bar is the *“Sensors”* section, which leads to the general sensor overview. In this overview, the user first selects the category of sensors they want to inspect. After selecting a category, SensorID-based filtering is available. Once a category is selected, temperature, humidity, and—if available—air pressure data is displayed, each with its own graph for the chosen time range. Below the graphs is a dashboard showing the median, average, standard deviation, and latest measurement for each metric. Under the dashboard is a table listing the collected sensor data, and at the bottom is the database information from which the data was retrieved.
 
+It is important to set the correct error message and use guiding colors to make the website easy to use. Generally the website uses the color red for errors and if something was done successfully a green text is displayed. When submitting a form in the AddSensor or RemoveSensor panels these errors can appear depending on the user input.
 # 4. User Requirements
 
 User requirements for the project are as follows:

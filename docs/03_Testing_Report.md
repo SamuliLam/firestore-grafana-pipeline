@@ -2,16 +2,16 @@
  This document outlines the testing procedures and results for the IoT sensor data ingestion and visualization system. The testing process aimed to ensure that all functional and non-functional requirements were met, and that the system operates reliably under various conditions.
 
 ## Table of Contents
-- [Test target and achievements](#test-target-and-achievements)
-- [Testing environment](#testing-environment)
-- [Test organization and coverage](#test-organization-and-coverage)
-- [Testing strategy](#testing-strategy)
-- [Tested features](#tested-features)
-- [Test cases and success criteria](#test-cases-and-success-criteria)
-- [Non-functional testing](#non-functional-testing)
-- [Special cases](#special-cases)
-- [Attributes that cant be tested](#attributes-that-cant-be-tested)
-- [Summary of test results](#summary-of-test-results)
+1. [Test target and achievements](#test-target-and-achievements)
+2. [Testing environment](#testing-environment)
+3. [Test organization and coverage](#test-organization-and-coverage)
+4. [Testing strategy](#testing-strategy)
+5. [Tested features](#tested-features)
+6. [Test cases and success criteria](#test-cases-and-success-criteria)
+7. [Non-functional testing](#non-functional-testing)
+8. [Special cases](#special-cases)
+9. [Attributes that cant be tested](#attributes-that-cant-be-tested)
+10. [Summary of test results](#summary-of-test-results)
 # Test target and achievements
 The primary targets of the testing process were to validate the following functionalities: Database working as expected, Normalizer API handles data correctly, communication between firestore and backend works smoothly. The testing process included unit tests and some integration testing.
 The testing process confirmed that the database operations, including data insertion, retrieval, and querying, functioned as intended. The Normalizer API was tested to ensure it correctly processes incoming sensor data and normalizes it into the expected format before storing it in the database. Communication between Firestore and the backend was verified to ensure that data is accurately fetched and forwarded without loss or corruption.
