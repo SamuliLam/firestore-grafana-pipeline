@@ -48,6 +48,7 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    env_file: .env
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
