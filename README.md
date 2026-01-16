@@ -167,6 +167,7 @@ This script will:
 4. Configure Nginx reverse proxy
 
 After running, access your app at `http://VM-IP/`
+Make sure to also update your .env variables and restart the docker containers
 
 ---
 
