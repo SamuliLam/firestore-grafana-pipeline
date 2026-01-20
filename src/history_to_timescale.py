@@ -91,7 +91,6 @@ def process_and_batch_save(docs, parser):
 
 
 def save_now(rows_to_save):
-    """Apufunktio lajitteluun ja tallennukseen."""
     print(f"Sorting and saving {len(rows_to_save)} rows...")
     rows_to_save.sort(key=lambda x: x['timestamp'])
 
