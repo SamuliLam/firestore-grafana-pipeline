@@ -3,11 +3,11 @@ import time
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import (
-    create_engine, Column, String, Float, DateTime, Text, func
+    create_engine, Column, String, Float, DateTime, Text, func, insert
 )
 from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.exc import OperationalError
-
+from sqlalchemy.dialects.postgresql import insert
 
 DATABASE_URL = os.getenv("POSTGRES_URL")
 
@@ -84,6 +84,7 @@ def get_all_sensor_metadata() -> list[dict]:
             for row in results
         ]
 
+
 def insert_sensor_metadata(metadata_rows: list[dict]):
     """Insert sensor metadata rows. Validates that sensor_id exists in sensor_data table."""
     engine = get_engine()
@@ -97,21 +98,18 @@ def insert_sensor_metadata(metadata_rows: list[dict]):
         print(f"Saved {len(metadata_rows)} rows to sensor_metadata.")
 
 
-def insert_sensor_rows(model, dict_rows: list[dict]):
+def insert_sensor_rows(dict_rows: list[dict]):
     """Insert sensor data rows directly into the database."""
     engine = get_engine()
-    with Session(engine) as session:
-        for row in dict_rows:
-            if isinstance(row, dict):
-                row = model(**row)
-            elif not isinstance(row, model):
-                raise TypeError(
-                    f"Row must be a dict or {model.__tablename__} instance, got {type(row)}"
-                )
-            session.merge(row)
+    with engine.begin() as connection:
+        stmt = insert(SensorData).values(dict_rows)
 
-        session.commit()
-        print(f"Saved {len(dict_rows)} rows to table {model.__tablename__}.")
+        on_conflict_stmt = stmt.on_conflict_do_nothing(
+            index_elements=['timestamp', 'sensor_id', 'metric_name']
+        )
+
+        connection.execute(on_conflict_stmt)
+        print(f"Saved {len(dict_rows)} rows to table {SensorData.__tablename__}.")
 
 
 def delete_sensor(sensor_id: str):
@@ -126,7 +124,7 @@ def delete_sensor(sensor_id: str):
         return deleted
 
 
-def get_oldest_collection_timestamp_from_db(collection_name: str) -> Optional[datetime]:
+def get_oldest_timestamp_from_db(collection_name: str) -> Optional[datetime]:
     engine = get_engine()
     with Session(engine) as session:
         oldest = (
@@ -135,3 +133,14 @@ def get_oldest_collection_timestamp_from_db(collection_name: str) -> Optional[da
             .scalar()
         )
         return oldest
+
+
+def get_newest_timestamp_from_db(collection_name: str) -> Optional[datetime]:
+    engine = get_engine()
+    with Session(engine) as session:
+        newest = (
+            session.query(func.max(SensorData.timestamp))
+            .filter(SensorData.sensor_type == collection_name)
+            .scalar()
+        )
+        return newest
