@@ -17,20 +17,32 @@ class SensorDataParser:
         self.collection_name = collection_name
 
     def process_raw_sensor_data(self, raw_data: dict):
+        if not raw_data:
+            return []
+
+        sensor_id = next((raw_data.get(f) for f in POSSIBLE_SENSOR_ID_FIELDS if raw_data.get(f)), None)
+        is_nested = any(_value_looks_nested(v) for v in raw_data.values())
+
+        if not is_nested and not sensor_id:
+            return []
+
         first_key_as_timestamp = None
 
-        if all(not _value_looks_nested(v) for v in raw_data.values()):
-            sensor_id = raw_data.get("sensor_id")
-            return self.convert_to_normalized_format(raw_data, sensor_id, first_key_as_timestamp)
+        if not is_nested:
+            return self.convert_to_normalized_format(raw_data, sensor_id, None)
 
-        if raw_data:
-            first_key = next(iter(raw_data))
-            parsed_time = SensorDataParser.parse_timestamp(first_key, use_default=False)
-            if parsed_time:
-                first_key_as_timestamp = parsed_time
+        first_key = next(iter(raw_data))
+        parsed_time = SensorDataParser.parse_timestamp(first_key, use_default=False)
+        if parsed_time:
+            first_key_as_timestamp = parsed_time
 
-        sensor_id, data = extract_sensor_and_metrics(raw_data)
-        return self.convert_to_normalized_format(data, sensor_id, first_key_as_timestamp)
+        extracted_id, data = extract_sensor_and_metrics(raw_data)
+        final_id = sensor_id or extracted_id
+
+        if not final_id:
+            return []
+
+        return self.convert_to_normalized_format(data, final_id, first_key_as_timestamp)
 
     def convert_to_normalized_format(self, data: dict, sensor_id: str | None,
                                      first_key_ts: datetime.datetime | None) -> List[dict]:
@@ -53,18 +65,14 @@ class SensorDataParser:
 
             try:
                 rows.extend(self.parse_sensor_item(sensor_reading, metrics, sensor_id, first_key_ts))
-            except ValueError as e:
-                logging.warning(f"Skipping sensor data item: {e}")
+            except ValueError:
+                continue
 
         return rows
 
     def parse_sensor_item(self, item: dict, metrics: dict, sensor_id: str | None,
                           first_key_ts: datetime.datetime | None) -> List[dict]:
         sensor_type = item.get("sensor_type", self.collection_name)
-        s_id = sensor_id or next((item.get(field) for field in POSSIBLE_SENSOR_ID_FIELDS if item.get(field)), None)
-
-        if not s_id:
-            raise ValueError("Sensor ID is missing or invalid. Cannot process sensor data.")
 
         item_timestamp = next((item.get(field) for field in POSSIBLE_TIMESTAMP_FIELDS if item.get(field)), None)
 
@@ -79,15 +87,13 @@ class SensorDataParser:
         for metric_name, metric_value in metrics.items():
             if isinstance(metric_value, list):
                 rows.extend(
-                    self.parse_list_metric(metric_name, metric_value, s_id, sensor_type, base_time)
+                    self.parse_list_metric(metric_name, metric_value, sensor_id, sensor_type, base_time)
                 )
             else:
-                row = self.create_sensor_row(metric_name, metric_value, s_id, sensor_type, base_time)
+                row = self.create_sensor_row(metric_name, metric_value, sensor_id, sensor_type, base_time)
                 if row:
                     rows.append(row)
 
-        if rows:
-            print(f"Parsed {len(rows)} metrics for sensor {s_id} starting {base_time}")
         return rows
 
     @staticmethod
@@ -143,7 +149,6 @@ class SensorDataParser:
     ) -> dict | None:
 
         if metric_value is None or metric_value == "" or (isinstance(metric_value, (list, dict)) and not metric_value):
-            logging.warning(f"Metric {metric_name} has an invalid or empty value for sensor {sensor_id}, skipping.")
             return None
 
         if isinstance(metric_value, (int, float)):
@@ -185,11 +190,7 @@ def _value_looks_nested(value):
         return True
 
     if isinstance(value, str):
-        try:
-            parsed = json.loads(value)
-            if isinstance(parsed, dict):
-                return True
-        except:
-            pass
+        s = value.strip()
+        return s.startswith('{"') and '":' in s
 
     return False
