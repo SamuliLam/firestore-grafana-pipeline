@@ -15,12 +15,19 @@ LIST_VALUE_INTERVAL_MINUTES = 5
 class SensorDataParser:
     def __init__(self, collection_name: str):
         self.collection_name = collection_name
+        self.tz_helsinki = ZoneInfo("Europe/Helsinki")
+        self.tz_utc = ZoneInfo("UTC")
+        self.id_fields = set(POSSIBLE_SENSOR_ID_FIELDS)
+        self.ts_fields = set(POSSIBLE_TIMESTAMP_FIELDS)
+        self.ignored_fields = self.id_fields | self.ts_fields | {"sensor_type"}
 
-    def process_raw_sensor_data(self, raw_data: dict):
+    def process_raw_sensor_data(self, raw_data: dict) -> List[dict]:
         if not raw_data:
             return []
 
-        sensor_id = next((raw_data.get(f) for f in POSSIBLE_SENSOR_ID_FIELDS if raw_data.get(f)), None)
+        raw_id = next((raw_data.get(f) for f in POSSIBLE_SENSOR_ID_FIELDS if raw_data.get(f)), None)
+        sensor_id = raw_id.replace(":", "") if raw_id else None
+
         is_nested = any(_value_looks_nested(v) for v in raw_data.values())
 
         if not is_nested and not sensor_id:
@@ -37,7 +44,7 @@ class SensorDataParser:
             first_key_as_timestamp = parsed_time
 
         extracted_id, data = extract_sensor_and_metrics(raw_data)
-        final_id = sensor_id or extracted_id
+        final_id = sensor_id or (extracted_id.replace(":", "") if extracted_id else None)
 
         if not final_id:
             return []
@@ -58,9 +65,7 @@ class SensorDataParser:
 
             metrics = {
                 k: v for k, v in sensor_reading.items()
-                if k not in POSSIBLE_SENSOR_ID_FIELDS
-                   and k not in POSSIBLE_TIMESTAMP_FIELDS
-                   and k != "sensor_type"
+                if k not in self.ignored_fields
             }
 
             try:
@@ -72,16 +77,17 @@ class SensorDataParser:
 
     def parse_sensor_item(self, item: dict, metrics: dict, sensor_id: str | None,
                           first_key_ts: datetime.datetime | None) -> List[dict]:
+
         sensor_type = item.get("sensor_type", self.collection_name)
 
         item_timestamp = next((item.get(field) for field in POSSIBLE_TIMESTAMP_FIELDS if item.get(field)), None)
 
         if item_timestamp:
-            base_time = SensorDataParser.parse_timestamp(item_timestamp)
+            base_time = self.parse_timestamp(item_timestamp)
         elif first_key_ts:
             base_time = first_key_ts
         else:
-            base_time = SensorDataParser.parse_timestamp(None)
+            base_time = self.parse_timestamp(None)
 
         rows = []
         for metric_name, metric_value in metrics.items():
@@ -96,32 +102,26 @@ class SensorDataParser:
 
         return rows
 
-    @staticmethod
-    def parse_timestamp(f_timestamp, use_default: bool = True) -> datetime.datetime | None:
-        helsinki_time = ZoneInfo("Europe/Helsinki")
-        utc_time = ZoneInfo("UTC")
+    def parse_timestamp(self, f_timestamp, use_default: bool = True) -> datetime.datetime | None:
 
         if not f_timestamp:
-            return datetime.datetime.now(tz=utc_time) if use_default else None
+            return datetime.datetime.now(tz=self.tz_utc) if use_default else None
 
         if isinstance(f_timestamp, DatetimeWithNanoseconds):
             if f_timestamp.tzinfo is None:
-                f_timestamp = f_timestamp.replace(tzinfo=utc_time)
-
-            return f_timestamp.astimezone(utc_time)
+                f_timestamp = f_timestamp.replace(tzinfo=self.tz_utc)
+            return f_timestamp.astimezone(self.tz_utc)
 
         if isinstance(f_timestamp, str):
             try:
                 dt = datetime.datetime.fromisoformat(f_timestamp)
-
                 if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=helsinki_time)
-
-                return dt.astimezone(utc_time)
+                    dt = dt.replace(tzinfo=self.tz_helsinki)
+                return dt.astimezone(self.tz_utc)
             except ValueError:
                 pass
 
-        return datetime.datetime.now(tz=utc_time) if use_default else None
+        return datetime.datetime.now(tz=self.tz_utc) if use_default else None
 
     @staticmethod
     def parse_list_metric(
@@ -154,11 +154,9 @@ class SensorDataParser:
         if isinstance(metric_value, (int, float)):
             metric_value = round(float(metric_value), 4)
 
-        clean_sensor_id = sensor_id.replace(":", "")
-
         return {
             "timestamp": timestamp,
-            "sensor_id": clean_sensor_id,
+            "sensor_id": sensor_id,
             "metric_name": metric_name,
             "metric_value": metric_value,
             "sensor_type": sensor_type,
