@@ -19,6 +19,7 @@ class SensorMetadata(Base):
     """Sensor metadata table"""
     __tablename__ = "sensor_metadata"
     sensor_id = Column(String(50), primary_key=True, nullable=False)
+    description = Column(Text, nullable=True)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     sensor_type = Column(String(50), nullable=False)

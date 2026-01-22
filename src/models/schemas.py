@@ -25,6 +25,7 @@ class SensorMetadataInput(BaseModel):
         json_schema_extra={
             "example": {
                 "sensor_id": "sensor_001",
+                "description": "Outdoor temperature sensor",
                 "latitude": 60.1699,
                 "longitude": 24.9384,
                 "sensor_type": "viherpysakki"
@@ -33,6 +34,7 @@ class SensorMetadataInput(BaseModel):
     )
 
     sensor_id: str = Field(..., description="Unique identifier for the sensor")
+    description: Optional[str] = Field(None, description="Description of the sensor")
     latitude: float = Field(..., description="Latitude coordinate")
     longitude: float = Field(..., description="Longitude coordinate")
     sensor_type: str = Field(..., description="Type of sensor")

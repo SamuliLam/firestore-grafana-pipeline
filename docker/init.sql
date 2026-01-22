@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS sensor_metadata (
     sensor_id VARCHAR(50) PRIMARY KEY NOT NULL,
+    description TEXT NULL,
     latitude FLOAT NOT NULL,
     longitude FLOAT NOT NULL,
     sensor_type VARCHAR(50) NOT NULL

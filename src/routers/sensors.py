@@ -22,6 +22,7 @@ router = APIRouter(prefix="/api/sensors", tags=["sensors"])
              },
              status_code=status.HTTP_201_CREATED
              )
+
 async def add_sensor(sensor_data: SensorMetadataInput):
     """Add a new sensor to the metadata registry"""
     try:
