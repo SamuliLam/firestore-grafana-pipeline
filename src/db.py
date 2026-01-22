@@ -78,6 +78,7 @@ def get_all_sensor_metadata() -> list[dict]:
         return [
             {
                 "sensor_id": row.sensor_id,
+                "description": row.description,
                 "latitude": row.latitude,
                 "longitude": row.longitude,
                 "sensor_type": row.sensor_type,
