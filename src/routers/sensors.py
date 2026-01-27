@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, Depends
 from src.models.schemas import SensorMetadataInput, ApiResponse
 from src.db import insert_sensor_metadata, delete_sensor, get_all_sensor_metadata
-from src.normalizer_api import auth0
+from src.auth import auth0
 from src.utils.api_response import make_response
 
 router = APIRouter(prefix="/api/sensors", tags=["sensors"])

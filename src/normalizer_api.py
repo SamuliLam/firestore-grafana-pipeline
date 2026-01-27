@@ -1,15 +1,8 @@
-import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_plugin.fast_api_client import Auth0FastAPI
-
-
 from src.db import init_db
 from src.routers import sensors, webhook, history
-
-
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,11 +31,6 @@ app.add_middleware(
 )
 
 app.state.trust_proxy = True
-
-auth0 = Auth0FastAPI(
-    domain=os.getenv("AUTH0_DOMAIN"),
-    audience=os.getenv("AUTH0_AUDIENCE"),
-)
 
 
 # Health check endpoint

@@ -31,12 +31,11 @@ services:
     depends_on:
       timescaledb:
         condition: service_healthy
+    env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
       - GOOGLE_APPLICATION_CREDENTIALS=/secrets/normalizer-sa.json
-      - POSTGRES_URL=${POSTGRES_URL}
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
-      - FIRESTORE_COLLECTIONS=${FIRESTORE_COLLECTIONS}
     volumes:
       - .:/app
       - ./docker/secrets/normalizer-sa.json:/secrets/normalizer-sa.json:ro
