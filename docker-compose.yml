@@ -13,6 +13,7 @@ services:
     volumes:
       - timescale_data:/var/lib/postgresql/data
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./docker/create_grafana_ro.sh:/docker-entrypoint-initdb.d/create_grafana_ro.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -51,11 +52,15 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-      - GF_AUTH_ANONYMOUS_ENABLED=${GRAFANA_ANONYMOUS_ENABLED}
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/MainDashboard.json
       - GF_SERVER_ROOT_URL=http://localhost:3000/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_EXPLORER_ENABLED=false
+      - TIMESCALE_READONLY_USER=${TIMESCALE_READONLY_USER}
+      - TIMESCALE_READONLY_PASSWORD=${TIMESCALE_READONLY_PASSWORD}
     depends_on:
       timescaledb:
         condition: service_healthy

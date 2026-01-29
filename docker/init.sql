@@ -17,3 +17,17 @@ CREATE TABLE IF NOT EXISTS sensor_data (
 
 -- Luodaan hypertable TimescaleDB:ssä
 SELECT create_hypertable('sensor_data', 'timestamp', if_not_exists => TRUE);
+
+CREATE USER grafana_ro WITH PASSWORD 'secure_password';
+
+-- grant connection to the database
+GRANT CONNECT ON DATABASE sensor_data TO grafana_ro;
+
+-- grant usage and select on public schema (replace public with your schema if needed)
+GRANT USAGE ON SCHEMA public TO grafana_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO grafana_ro;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO grafana_ro;
+
+-- ensure future tables are readable
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO grafana_ro;
+
