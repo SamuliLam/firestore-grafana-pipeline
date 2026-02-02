@@ -1,4 +1,5 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Depends
+from src.auth import auth0
 import json
 import datetime
 from src.models.schemas import WebhookData, ApiResponse
@@ -9,7 +10,7 @@ from src.utils.api_response import make_response
 router = APIRouter(tags=["webhook"])
 
 
-@router.post("/api/webhook",
+@router.post("/api/webhook", dependencies=[Depends(auth0.require_auth())],
              responses={
                  201: {
                      "description": "Data successfully inserted",

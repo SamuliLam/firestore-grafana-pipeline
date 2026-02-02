@@ -87,7 +87,7 @@ async def delete_sensor_endpoint(sensor_id: str,  auth_result: dict = Depends(au
         )
 
 
-@router.get("/metadata",
+@router.get("/metadata", dependencies=[Depends(auth0.require_auth())],
             responses={
                 200: {
                     "description": "Sensor metadata retrieved successfully",
