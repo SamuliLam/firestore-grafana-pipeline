@@ -1,4 +1,5 @@
-from fastapi import APIRouter, BackgroundTasks, status
+from fastapi import APIRouter, BackgroundTasks, status, Depends
+from src.auth import auth0
 from src.models.schemas import ApiResponse
 from src.history_to_timescale import sync_firestore_to_timescale
 from src.utils.api_response import make_response
@@ -7,7 +8,7 @@ from src.utils.sync_status import sync_status
 router = APIRouter(prefix="/api/history", tags=["history"])
 
 
-@router.post("",
+@router.post("", dependencies=[Depends(auth0.require_auth())],
     responses={
         202: {
             "description": "History sync started in background",
