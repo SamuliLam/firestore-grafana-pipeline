@@ -1,22 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Any, Optional
-
-
-class ApiResponse(BaseModel):
-    """Standard API response format"""
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "status": "success",
-                "message": "Operation completed successfully",
-                "data": {}
-            }
-        }
-    )
-
-    status: str = Field(..., description="Response status")
-    message: str = Field(..., description="Response message")
-    data: Optional[Any] = Field(None, description="Response data")
+from typing import Optional
 
 
 class SensorMetadataInput(BaseModel):

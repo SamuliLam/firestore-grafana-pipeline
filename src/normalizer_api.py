@@ -1,8 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from src.errors import (
+    http_exception_handler,
+    unhandled_exception_handler,
+)
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from src.db import init_db
 from src.routers import sensors, webhook, history
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,6 +24,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,124 +1,73 @@
-from fastapi import APIRouter, status, Depends, HTTPException
-from src.models.schemas import SensorMetadataInput, ApiResponse
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from src.dependencies import get_auth_claims, require_admin
+from src.models.schemas import SensorMetadataInput
 from src.db import insert_sensor_metadata, delete_sensor, get_all_sensor_metadata
-from src.auth import auth0
-from src.utils.api_response import make_response
 
 router = APIRouter(prefix="/api/sensors", tags=["sensors"])
 
-ADMIN_CLAIM = "https://envidata-api.metropolia.fi/admin"
 
-
-@router.post("",
-             responses={
-                 201: {
-                     "description": "Sensor added successfully",
-                     "model": ApiResponse
-                 },
-                 400: {
-                     "description": "Bad request - invalid sensor data",
-                     "model": ApiResponse
-                 },
-                 422: {
-                     "description": "Validation error"
-                 }
-             },
-             status_code=status.HTTP_201_CREATED
-             )
-async def add_sensor(sensor_data: SensorMetadataInput, auth_result: dict = Depends(auth0.require_auth())):
-    """Add a new sensor to the metadata registry"""
-    if not auth_result.get(ADMIN_CLAIM, False):
-        raise HTTPException(status_code=403, detail="Admin required.")
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def add_sensor(
+    sensor_data: SensorMetadataInput,
+    _=Depends(require_admin),
+):
+    data = sensor_data.model_dump()
 
     try:
-        data = sensor_data.model_dump()
         insert_sensor_metadata([data])
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
-            detail="Failed to insert sensor metadata"
+            detail="Failed to insert sensor metadata",
         )
 
-    return make_response(
-        status="success",
-        message="Sensor added successfully",
-        data=data,
-        status_code=status.HTTP_201_CREATED
-    )
+    return {
+        "status": "success",
+        "message": "Sensor added successfully",
+        "data": data,
+    }
 
 
-@router.delete("/{sensor_id}",
-               responses={
-                   200: {
-                       "description": "Sensor deleted successfully",
-                       "model": ApiResponse
-                   },
-                   404: {
-                       "description": "Sensor not found",
-                       "model": ApiResponse
-                   },
-                   500: {
-                       "description": "Internal server error",
-                       "model": ApiResponse
-                   }
-               }
-               )
-async def delete_sensor_endpoint(sensor_id: str, auth_result: dict = Depends(auth0.require_auth())):
-    """Delete a sensor from the metadata registry"""
-
-    if not auth_result.get(ADMIN_CLAIM, False):
-        raise HTTPException(status_code=403, detail="Admin required.")
-
+@router.delete("/{sensor_id}")
+async def delete_sensor_endpoint(
+    sensor_id: str,
+    _=Depends(require_admin),
+):
     try:
         deleted = delete_sensor(sensor_id)
-
-        if deleted == 0:
-            return make_response(
-                status="error",
-                message=f"Sensor {sensor_id} not found",
-                status_code=404
-            )
-
-        return make_response(
-            status="success",
-            message=f"Sensor {sensor_id} deleted",
-            status_code=200
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to delete sensor",
         )
 
-    except Exception as e:
-        return make_response(
-            status="error",
-            message=str(e),
-            status_code=500
+    if deleted == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Sensor {sensor_id} not found",
         )
 
+    return {
+        "status": "success",
+        "message": f"Sensor {sensor_id} deleted",
+    }
 
-@router.get("/metadata", dependencies=[Depends(auth0.require_auth())],
-            responses={
-                200: {
-                    "description": "Sensor metadata retrieved successfully",
-                    "model": ApiResponse
-                },
-                500: {
-                    "description": "Internal server error",
-                    "model": ApiResponse
-                }
-            }
-            )
-async def get_sensor_metadata_endpoint():
-    """Retrieve metadata for all registered sensors"""
+
+@router.get("/metadata")
+async def get_sensor_metadata_endpoint(
+    _=Depends(get_auth_claims),
+):
     try:
         metadata = get_all_sensor_metadata()
-    except Exception as e:
-        return make_response(
-            status="error",
-            message=str(e),
-            status_code=500
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve sensor metadata",
         )
 
-    return make_response(
-        status="success",
-        message="Sensor metadata retrieved successfully",
-        data=metadata,
-        status_code=200
-    )
+    return {
+        "status": "success",
+        "message": "Sensor metadata retrieved successfully",
+        "data": metadata,
+    }

@@ -34,10 +34,10 @@ services:
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app
+      - PYTHONPATH=/src
       - GOOGLE_APPLICATION_CREDENTIALS=/secrets/normalizer-sa.json
     volumes:
-      - .:/app
+      - .:/src
       - ./docker/secrets/normalizer-sa.json:/secrets/normalizer-sa.json:ro
 
   # Grafana

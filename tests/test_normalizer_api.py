@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 
-# Mock all external dependencies before importing the app
+# Mock all external dependencies before importing the src
 @pytest.fixture(autouse=True, scope='session')
 def mock_dependencies():
     """Mock all external dependencies at session level"""
@@ -19,7 +19,7 @@ def mock_dependencies():
 
 @pytest.fixture
 def client():
-    """Create a test client for the FastAPI app"""
+    """Create a test client for the FastAPI src"""
     from src.normalizer_api import app
     return TestClient(app)
 
