@@ -1,5 +1,4 @@
 import datetime
-import logging
 import json
 from typing import List
 from zoneinfo import ZoneInfo
