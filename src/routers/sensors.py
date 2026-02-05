@@ -1,10 +1,12 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status, Depends, HTTPException
 from src.models.schemas import SensorMetadataInput, ApiResponse
 from src.db import insert_sensor_metadata, delete_sensor, get_all_sensor_metadata
 from src.auth import auth0
 from src.utils.api_response import make_response
 
 router = APIRouter(prefix="/api/sensors", tags=["sensors"])
+
+ADMIN_CLAIM = "https://envidata-api.metropolia.fi/admin"
 
 
 @router.post("",
@@ -23,18 +25,18 @@ router = APIRouter(prefix="/api/sensors", tags=["sensors"])
              },
              status_code=status.HTTP_201_CREATED
              )
-
 async def add_sensor(sensor_data: SensorMetadataInput, auth_result: dict = Depends(auth0.require_auth())):
     """Add a new sensor to the metadata registry"""
+    if not auth_result.get(ADMIN_CLAIM, False):
+        raise HTTPException(status_code=403, detail="Admin required.")
+
     try:
         data = sensor_data.model_dump()
         insert_sensor_metadata([data])
     except Exception as e:
-        print("Error:", e)
-        return make_response(
-            status="error",
-            message=str(e),
-            status_code=status.HTTP_400_BAD_REQUEST
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to insert sensor metadata"
         )
 
     return make_response(
@@ -61,8 +63,12 @@ async def add_sensor(sensor_data: SensorMetadataInput, auth_result: dict = Depen
                    }
                }
                )
-async def delete_sensor_endpoint(sensor_id: str,  auth_result: dict = Depends(auth0.require_auth())):
+async def delete_sensor_endpoint(sensor_id: str, auth_result: dict = Depends(auth0.require_auth())):
     """Delete a sensor from the metadata registry"""
+
+    if not auth_result.get(ADMIN_CLAIM, False):
+        raise HTTPException(status_code=403, detail="Admin required.")
+
     try:
         deleted = delete_sensor(sensor_id)
 
