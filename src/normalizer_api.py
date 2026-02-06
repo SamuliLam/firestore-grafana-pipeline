@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from src.db import init_db
 from src.routers import sensors, webhook, history
+import os
 
 
 
@@ -33,7 +34,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://localhost:3000",
+        "http://localhost",
+        os.getenv("PROD_DOMAIN")
     ],
     allow_credentials=True,
     allow_methods=["*"],
