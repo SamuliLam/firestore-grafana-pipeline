@@ -59,6 +59,7 @@ async def get_sensor_metadata_endpoint(
     _=Depends(get_auth_claims),
 ):
     try:
+        print("claims:", get_auth_claims())
         metadata = get_all_sensor_metadata()
     except Exception:
         raise HTTPException(

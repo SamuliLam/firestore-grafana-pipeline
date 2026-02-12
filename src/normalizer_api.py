@@ -6,7 +6,7 @@ from src.errors import (
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from src.db import init_db
-from src.routers import sensors, webhook, history, grafana_proxy, session
+from src.routers import sensors, webhook, history
 import os
 
 
@@ -57,8 +57,6 @@ async def health_check():
 app.include_router(sensors.router)
 app.include_router(webhook.router)
 app.include_router(history.router)
-app.include_router(grafana_proxy.router)
-app.include_router(session.router)
 
 
 
