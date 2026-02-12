@@ -7,6 +7,7 @@ ADMIN_CLAIM = "https://envidata-api.metropolia.fi/admin"
 def get_auth_claims(
         claims: dict = Depends(auth0.require_auth()),
 ) -> dict:
+    print("Decoded JWT claims:", claims)
     return claims
 
 

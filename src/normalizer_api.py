@@ -6,7 +6,7 @@ from src.errors import (
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from src.db import init_db
-from src.routers import sensors, webhook, history
+from src.routers import sensors, webhook, history, grafana_proxy, session
 import os
 
 
@@ -35,6 +35,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost",
+        "https://abigail-unprefigured-yen.ngrok-free.dev",
         os.getenv("PROD_DOMAIN")
     ],
     allow_credentials=True,
@@ -56,6 +57,9 @@ async def health_check():
 app.include_router(sensors.router)
 app.include_router(webhook.router)
 app.include_router(history.router)
+app.include_router(grafana_proxy.router)
+app.include_router(session.router)
+
 
 
 if __name__ == "__main__":
