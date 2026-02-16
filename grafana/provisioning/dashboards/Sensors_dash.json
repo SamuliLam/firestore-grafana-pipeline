@@ -477,7 +477,7 @@
           }
         }
       ],
-      "title": "Temperature cauge",
+      "title": "Temperature Gauge",
       "type": "gauge"
     },
     {
@@ -557,7 +557,7 @@
           }
         }
       ],
-      "title": "Humidity cauge",
+      "title": "Humidity Gauge",
       "type": "gauge"
     },
     {
@@ -637,7 +637,7 @@
           }
         }
       ],
-      "title": "Pressure cauge",
+      "title": "Pressure Gauge",
       "type": "gauge"
     },
     {
