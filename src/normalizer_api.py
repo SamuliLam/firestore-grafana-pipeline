@@ -35,7 +35,6 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost",
-        "https://abigail-unprefigured-yen.ngrok-free.dev",
         os.getenv("PROD_DOMAIN")
     ],
     allow_credentials=True,
