@@ -43,21 +43,30 @@ services:
   # Grafana
   grafana:
     image: grafana/grafana:latest
-    container_name: grafana
     restart: always
+    env_file: .env
     ports:
       - "3000:3000"
-    env_file: .env
     environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/MainDashboard.json
-      - GF_SERVER_ROOT_URL=http://localhost:3000/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
-      - GF_AUTH_BASIC_ENABLED=false
-      - GF_EXPLORER_ENABLED=false
+      - GF_LOG_LEVEL=debug
+      - GF_AUTH_JWT_ENABLED=true
+      - GF_AUTH_JWT_URL_LOGIN=true
+      - GF_AUTH_JWT_JWK_SET_URL=https://${VITE_AUTH0_DOMAIN}/.well-known/jwks.json
+      - GF_AUTH_JWT_CACHE_TTL=60m
+      - GF_AUTH_JWT_USERNAME_CLAIM=sub
+      - GF_AUTH_JWT_EMAIL_CLAIM=sub
+      - GF_AUTH_JWT_AUTO_SIGN_UP=true
+      - GF_AUTH_JWT_SKIP_ROLE_SYNC=true
+      - GF_AUTH_JWT_HEADER_NAME=X-JWT-Assertion
+      #- GF_AUTH_BASIC_ENABLED=false
+      #- GF_AUTH_DISABLE_LOGIN_FORM=true
+
       - TIMESCALE_READONLY_USER=${TIMESCALE_READONLY_USER}
       - TIMESCALE_READONLY_PASSWORD=${TIMESCALE_READONLY_PASSWORD}
     depends_on:
