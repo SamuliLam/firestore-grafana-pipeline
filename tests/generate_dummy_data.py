@@ -1,39 +1,70 @@
 import time
 import random
 from datetime import datetime, timedelta
+
 from src.SensorDataParser import SensorDataParser
 from src.history_to_timescale import process_and_batch_save
 
+
 def generate_test_docs(amount=None):
     """
-    Luo dokumentteja 12h välein 30 päivän ajalta.
-    Jos amount annetaan, generointi pysäytetään siinä kohtaa.
+    Luo dokumentteja dedikoiduilla sensoreilla:
+    3 x Vesi, 3 x Maaperä, 3 x Ilma.
     """
     test_docs = []
-
     interval = timedelta(hours=12)
-    days = 30
-    total_points = (24 // 12) * days  # = 60 datapistettä
-
     base_time = datetime.now()
 
-    print(f"Generating time-series mock documents (12h interval, last 30 days)...")
+    print(f"Generating specialized mock documents (3 Water, 3 Soil, 3 Air sensors)...")
 
-    for i in range(total_points):
-        if amount and i >= amount:
-            break
+    for i in range(amount):
+        # Lasketaan aikaleima (pysyy samana 9 sensorin ryhmissä)
+        timestamp = base_time - (interval * (i // 9))
 
-        timestamp = base_time - interval * i
+        # Määritetään sensorin tyyppi indeksin perusteella (0-8)
+        sensor_index = i % 9
+        sensor_id = f"sensor_{sensor_index}"
 
+        # Pohjadokumentti
         doc_data = {
             "timestamp": timestamp.isoformat(),
-            "temperature": str(round(random.uniform(10.0, 30.0), 2)),
-            "humidity": str(round(random.uniform(10.0, 30.0), 2)),
-            "sensor_id": f"sensor_{i % 3}",
+            "sensor_id": sensor_id,
         }
+
+        # Datan generointi sensorityypin mukaan
+        if 0 <= sensor_index <= 2:
+            # VESISENSORIT
+            doc_data.update({
+                "type": "water",
+                "water_level_mm": round(random.uniform(100, 2000), 1),
+                "water_temperature": round(random.uniform(4.0, 22.0), 2),
+                "water_conductivity_mS": round(random.uniform(0.5, 10.0), 3),
+                "water_flow_m3s": round(random.uniform(0.01, 5.0), 3)
+            })
+
+        elif 3 <= sensor_index <= 5:
+            # MAAPERÄSENSORIT
+            doc_data.update({
+                "sensor_type": "soil",
+                "soil_moisture_pct": round(random.uniform(5.0, 45.0), 1),
+                "soil_temperature": round(random.uniform(2.0, 20.0), 2),
+                "soil_conductivity_mS": round(random.uniform(0.1, 2.5), 3),
+                "soil_oxygen_pct": round(random.uniform(15.0, 21.0), 1)
+            })
+
+        else:
+            # ILMASENSORIT
+            doc_data.update({
+                "sensor_type": "air",
+                "air_temperature": round(random.uniform(-10.0, 30.0), 2),
+                "air_humidity_pct": round(random.uniform(20.0, 95.0), 2),
+                "air_pressure_kPa": round(random.uniform(98.0, 104.0), 2),
+                "air_particulates_ppm": round(random.uniform(0.0, 50.0), 1)
+            })
 
         class MockDoc:
             def __init__(self, data): self._data = data
+
             def to_dict(self): return self._data
 
         test_docs.append(MockDoc(doc_data))
@@ -41,24 +72,21 @@ def generate_test_docs(amount=None):
     return test_docs
 
 
-
-def run_performance_test(amount=100000):
+def run_performance_test(amount=50000):
+    # Tähän väliin tulisi Parserin alustus alkuperäisestä koodistasi
     parser = SensorDataParser(collection_name="test_collection")
+    print(f"\n--- Starting Generation for {amount} docs ---")
     docs = generate_test_docs(amount)
 
-    print("\n--- Starting Performance Test ---")
+    print(f"\n--- Starting Performance Test ---")
     start_time = time.time()
 
     process_and_batch_save(docs, parser)
 
-    end_time = time.time()
-    duration = end_time - start_time
-
-    print(f"\n--- Test Finished ---")
-    print(f"Processed and saved {amount} documents in {duration:.2f} seconds")
-    print(f"Average speed: {amount / duration:.0f} docs/second")
+    duration = time.time() - start_time
+    print(f"Generated and processed {len(docs)} documents.")
+    print(f"Average speed: {len(docs) / (duration if duration > 0 else 1):.0f} docs/second")
 
 
 if __name__ == "__main__":
-
     run_performance_test(amount=50000)
