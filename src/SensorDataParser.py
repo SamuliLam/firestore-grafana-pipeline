@@ -102,9 +102,14 @@ class SensorDataParser:
         return rows
 
     def parse_timestamp(self, f_timestamp, use_default: bool = True) -> datetime.datetime | None:
-
         if not f_timestamp:
             return datetime.datetime.now(tz=self.tz_utc) if use_default else None
+
+        if isinstance(f_timestamp, (int, float)):
+            if f_timestamp > 1e12:
+                f_timestamp /= 1000
+
+            return datetime.datetime.fromtimestamp(f_timestamp, tz=self.tz_utc)
 
         if isinstance(f_timestamp, DatetimeWithNanoseconds):
             if f_timestamp.tzinfo is None:
@@ -112,6 +117,9 @@ class SensorDataParser:
             return f_timestamp.astimezone(self.tz_utc)
 
         if isinstance(f_timestamp, str):
+            if f_timestamp.replace('.', '', 1).isdigit():
+                return self.parse_timestamp(float(f_timestamp), use_default)
+
             try:
                 dt = datetime.datetime.fromisoformat(f_timestamp)
                 if dt.tzinfo is None:
