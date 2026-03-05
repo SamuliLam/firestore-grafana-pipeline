@@ -19,13 +19,18 @@ class SensorDataParser:
         self.id_fields = set(POSSIBLE_SENSOR_ID_FIELDS)
         self.ts_fields = set(POSSIBLE_TIMESTAMP_FIELDS)
         self.ignored_fields = self.id_fields | self.ts_fields | {"sensor_type"}
+        self.cached_id_field = None
+        self.cached_ts_field = None
 
     def process_raw_sensor_data(self, raw_data: dict) -> List[dict]:
         if not raw_data:
             return []
 
-        raw_id = next((raw_data.get(f) for f in POSSIBLE_SENSOR_ID_FIELDS if raw_data.get(f)), None)
-        sensor_id = raw_id.replace(":", "") if raw_id else None
+        if not self.cached_id_field:
+            self.cached_id_field = find_field_name(raw_data, self.id_fields)
+
+        raw_id_val = raw_data.get(self.cached_id_field) if self.cached_id_field else None
+        sensor_id = raw_id_val.replace(":", "") if raw_id_val else None
 
         is_nested = any(_value_looks_nested(v) for v in raw_data.values())
 
@@ -79,10 +84,13 @@ class SensorDataParser:
 
         sensor_type = item.get("sensor_type", self.collection_name)
 
-        item_timestamp = next((item.get(field) for field in POSSIBLE_TIMESTAMP_FIELDS if item.get(field)), None)
+        if not self.cached_ts_field:
+            self.cached_ts_field = find_field_name(item, self.ts_fields)
 
-        if item_timestamp:
-            base_time = self.parse_timestamp(item_timestamp)
+        item_timestamp_val = item.get(self.cached_ts_field) if self.cached_ts_field else None
+
+        if item_timestamp_val:
+            base_time = self.parse_timestamp(item_timestamp_val)
         elif first_key_ts:
             base_time = first_key_ts
         else:
@@ -199,3 +207,11 @@ def _value_looks_nested(value):
         return s.startswith('{"') and '":' in s
 
     return False
+
+
+def find_field_name(raw_data: dict, possible_fields: set) -> str | None:
+    for f in possible_fields:
+        if f in raw_data:
+            return f
+    return None
+
