@@ -3,14 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from src.dependencies import get_auth_claims, require_admin
 from src.models.schemas import SensorMetadataInput
 from src.db import insert_sensor_metadata, delete_sensor, get_all_sensor_metadata
-
+from src.sensor_config import update_sensor_config as update_sensor_config_fs
 router = APIRouter(prefix="/api/sensors", tags=["sensors"])
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def add_sensor(
-    sensor_data: SensorMetadataInput,
-    _=Depends(require_admin),
+        sensor_data: SensorMetadataInput,
+        _=Depends(require_admin),
 ):
     data = sensor_data.model_dump()
 
@@ -31,8 +31,8 @@ async def add_sensor(
 
 @router.delete("/{sensor_id}")
 async def delete_sensor_endpoint(
-    sensor_id: str,
-    _=Depends(require_admin),
+        sensor_id: str,
+        _=Depends(require_admin),
 ):
     try:
         deleted = delete_sensor(sensor_id)
@@ -56,10 +56,9 @@ async def delete_sensor_endpoint(
 
 @router.get("/metadata")
 async def get_sensor_metadata_endpoint(
-    _=Depends(get_auth_claims),
+        _=Depends(get_auth_claims),
 ):
     try:
-        print("claims:", get_auth_claims())
         metadata = get_all_sensor_metadata()
     except Exception:
         raise HTTPException(
@@ -71,4 +70,30 @@ async def get_sensor_metadata_endpoint(
         "status": "success",
         "message": "Sensor metadata retrieved successfully",
         "data": metadata,
+    }
+
+
+@router.post("/config")
+async def update_sensor_config(
+        sensor_id: str,
+        config: dict,
+        _=Depends(require_admin)
+):
+    try:
+        updated = update_sensor_config_fs(sensor_id, config)
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update sensor config",
+        )
+
+    if not updated:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Sensor {sensor_id} not found",
+        )
+
+    return {
+        "status": "success",
+        "message": f"Sensor {sensor_id} config updated",
     }
