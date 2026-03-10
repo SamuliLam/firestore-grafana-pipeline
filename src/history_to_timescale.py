@@ -1,6 +1,8 @@
 import os
 
 from google.cloud import firestore
+from google.cloud.firestore_v1 import FieldFilter
+
 from src.db import insert_sensor_rows, get_oldest_timestamp_from_db, get_newest_timestamp_from_db
 from src.SensorDataParser import SensorDataParser
 from src.utils.sync_status import sync_status
@@ -54,7 +56,9 @@ def sync_firestore_to_timescale():
 
             parser = SensorDataParser(pid)
 
-            query_base = client.collection_group("readings").where("project_id", "==", pid)
+            query_base = client.collection_group("readings").where(filter=FieldFilter("project_id", "==", pid))
+            all_docs = list(query_base.stream())
+            print(f"DEBUG: Collection group found {len(all_docs)} docs total for project {pid}")
 
             new_query = query_base
             if newest_ts:
@@ -82,7 +86,9 @@ def process_and_batch_save(docs, parser, project_id):
     current_chunk = []
     total_processed = 0
 
-    for doc in docs:
+    doc_list = list(docs)
+
+    for doc in doc_list:
         raw_data = doc.to_dict()
         rows = parser.process_raw_sensor_data(raw_data)
 
