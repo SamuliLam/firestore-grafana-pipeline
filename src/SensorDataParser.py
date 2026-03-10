@@ -12,13 +12,13 @@ LIST_VALUE_INTERVAL_MINUTES = 5
 
 
 class SensorDataParser:
-    def __init__(self, collection_name: str):
-        self.collection_name = collection_name
+    def __init__(self, project_id: str):
+        self.project_id = project_id
         self.tz_helsinki = ZoneInfo("Europe/Helsinki")
         self.tz_utc = ZoneInfo("UTC")
         self.id_fields = set(POSSIBLE_SENSOR_ID_FIELDS)
         self.ts_fields = set(POSSIBLE_TIMESTAMP_FIELDS)
-        self.ignored_fields = self.id_fields | self.ts_fields | {"sensor_type"}
+        self.ignored_fields = self.id_fields | self.ts_fields | {"project_id"}
         self.cached_id_field = None
         self.cached_ts_field = None
 
@@ -82,7 +82,7 @@ class SensorDataParser:
     def parse_sensor_item(self, item: dict, metrics: dict, sensor_id: str | None,
                           first_key_ts: datetime.datetime | None) -> List[dict]:
 
-        sensor_type = item.get("sensor_type", self.collection_name)
+        project_id = item.get("project_id", self.project_id)
 
         if not self.cached_ts_field:
             self.cached_ts_field = find_field_name(item, self.ts_fields)
@@ -100,10 +100,10 @@ class SensorDataParser:
         for metric_name, metric_value in metrics.items():
             if isinstance(metric_value, list):
                 rows.extend(
-                    self.parse_list_metric(metric_name, metric_value, sensor_id, sensor_type, base_time)
+                    self.parse_list_metric(metric_name, metric_value, sensor_id, project_id, base_time)
                 )
             else:
-                row = self.create_sensor_row(metric_name, metric_value, sensor_id, sensor_type, base_time)
+                row = self.create_sensor_row(metric_name, metric_value, sensor_id, project_id, base_time)
                 if row:
                     rows.append(row)
 
@@ -143,13 +143,13 @@ class SensorDataParser:
             metric_name: str,
             metric_values: list,
             sensor_id: str,
-            sensor_type: str,
+            project_id: str,
             base_time: datetime.datetime
     ) -> List[dict]:
         rows = []
         for i, val in enumerate(reversed(metric_values)):
             ts = base_time - datetime.timedelta(minutes=LIST_VALUE_INTERVAL_MINUTES * i)
-            row = SensorDataParser.create_sensor_row(metric_name, val, sensor_id, sensor_type, ts)
+            row = SensorDataParser.create_sensor_row(metric_name, val, sensor_id, project_id, ts)
             if row:
                 rows.append(row)
         return rows
@@ -159,7 +159,7 @@ class SensorDataParser:
             metric_name: str,
             metric_value,
             sensor_id: str,
-            sensor_type: str,
+            project_id: str,
             timestamp: datetime.datetime
     ) -> dict | None:
 
@@ -174,7 +174,7 @@ class SensorDataParser:
             "sensor_id": sensor_id,
             "metric_name": metric_name,
             "metric_value": metric_value,
-            "sensor_type": sensor_type,
+            "project_id": project_id,
         }
 
 

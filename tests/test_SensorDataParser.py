@@ -33,7 +33,7 @@ class TestSensorDataParser:
     def test_initialization(self):
         """Test parser initialization"""
         parser = SensorDataParser("my_collection")
-        assert parser.collection_name == "my_collection"
+        assert parser.project_id == "my_collection"
 
     def test_simple_flat_data(self, parser, fixed_time):
         """Test processing flat sensor data with all fields"""
@@ -138,7 +138,7 @@ class TestSensorDataParser:
         assert row["metric_name"] == "temperature"
         assert row["metric_value"] == 23.4568  # Rounded to 4 decimals
         assert row["sensor_id"] == "sensor001"  # Colon removed
-        assert row["sensor_type"] == "temp_sensor"
+        assert row["project_id"] == "temp_sensor"
         assert row["timestamp"] == fixed_time
 
     def test_create_sensor_row_with_none_value(self, fixed_time):
@@ -207,26 +207,26 @@ class TestSensorDataParser:
             result = parser.process_raw_sensor_data(raw_data)
             assert len(result) == 1
 
-    def test_sensor_type_from_item(self, parser, fixed_time):
-        """Test that sensor_type is taken from item if present"""
+    def test_project_id_from_item(self, parser, fixed_time):
+        """Test that project_id is taken from item if present"""
         with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "test_sensor",
-                "sensor_type": "custom_type",
+                "project_id": "custom_type",
                 "temperature": 23.5
             }
             result = parser.process_raw_sensor_data(raw_data)
-            assert result[0]["sensor_type"] == "custom_type"
+            assert result[0]["project_id"] == "custom_type"
 
-    def test_sensor_type_defaults_to_collection(self, parser, fixed_time):
-        """Test that sensor_type defaults to collection name"""
+    def test_project_id_defaults_to_collection(self, parser, fixed_time):
+        """Test that project_id defaults to collection name"""
         with patch('src.SensorDataParser.SensorDataParser.parse_timestamp', return_value=fixed_time):
             raw_data = {
                 "sensor_id": "test_sensor",
                 "temperature": 23.5
             }
             result = parser.process_raw_sensor_data(raw_data)
-            assert result[0]["sensor_type"] == "test_collection"
+            assert result[0]["project_id"] == "test_collection"
 
     def test_array_of_sensor_readings(self, parser, fixed_time):
         """Test processing array of sensor readings"""

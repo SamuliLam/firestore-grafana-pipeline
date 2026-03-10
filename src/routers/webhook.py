@@ -17,7 +17,7 @@ async def firestore_webhook(
 ):
     data = webhook_data.model_dump()
 
-    parser = SensorDataParser(data.get("sensor_type"))
+    parser = SensorDataParser(data.get("project_id"))
     sensor_rows = parser.process_raw_sensor_data(data)
 
     if not sensor_rows:

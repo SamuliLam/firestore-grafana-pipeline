@@ -68,7 +68,7 @@ def test_insert_sensor_rows(session):
                 "sensor_id": "S1",
                 "metric_name": "temp",
                 "metric_value": "22.5",
-                "sensor_type": "climate",
+                "project_id": "climate",
             }
         ],
     )
@@ -85,7 +85,7 @@ def test_sensor_exists_in_data(session):
         sensor_id="S2",
         metric_name="humidity",
         metric_value="44",
-        sensor_type="climate",
+        project_id="climate",
     )
     session.add(row)
     session.commit()
@@ -103,7 +103,7 @@ def test_insert_sensor_metadata(session):
             sensor_id="S3",
             metric_name="temp",
             metric_value="20",
-            sensor_type="climate",
+            project_id="climate",
         )
     )
     session.commit()
@@ -114,7 +114,7 @@ def test_insert_sensor_metadata(session):
                 "sensor_id": "S3",
                 "latitude": 10.0,
                 "longitude": 20.0,
-                "sensor_type": "climate",
+                "project_id": "climate",
             }
         ]
     )
@@ -133,7 +133,7 @@ def test_insert_sensor_rows_invalid_type():
 def test_delete_sensor(session):
     # Insert metadata
     row = SensorMetadata(
-        sensor_id="S4", latitude=50, longitude=60, sensor_type="climate"
+        sensor_id="S4", latitude=50, longitude=60, project_id="climate"
     )
     session.add(row)
     session.commit()
@@ -155,14 +155,14 @@ def test_get_oldest_collection_timestamp_from_db(session):
                 sensor_id="A",
                 metric_name="temp",
                 metric_value="33",
-                sensor_type="climate",
+                project_id="climate",
             ),
             SensorData(
                 timestamp=t1,
                 sensor_id="B",
                 metric_name="temp",
                 metric_value="30",
-                sensor_type="climate",
+                project_id="climate",
             ),
         ]
     )

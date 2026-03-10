@@ -39,9 +39,9 @@ The Cloud Run service that subscribes to the Pub/Sub topic performs the followin
 
 #### Enrichment rule
 
-The incoming raw data already contains the `sensor_id` field. The enrichment step adds only a `sensor_type` field that identifies the sensor category (for example, `ymparistomoduuli`).
+The incoming raw data already contains the `sensor_id` field. The enrichment step adds only a `project_id` field that identifies what project the sensor is currently apart of (for example, `myyrmäki_katupuu`).
 
-The enriched object (raw data + `sensor_type`) is used for forwarding to the Normalizer API. This enriched object is not written to Firestore.
+The enriched object (raw data + `project_id`) is used for forwarding to the Normalizer API. This enriched object is not written to Firestore.
 
 **Example of the typical data structure after parsing and enrichment:**
 
@@ -51,7 +51,7 @@ The enriched object (raw data + `sensor_type`) is used for forwarding to the Nor
   "temperature": 21.4,
   "humidity": 55.1,
   "timestamp": "2024-06-15T12:34:56Z",
-  "sensor_type": "viherpysakki"
+  "project_id": "viherpysakki"
 }
 ```
 
@@ -59,15 +59,15 @@ The enriched object (raw data + `sensor_type`) is used for forwarding to the Nor
 
 After parsing (and independently of forwarding to the Normalizer API), the service writes the original parsed data into Firestore:
 
-- Each sensor category uses its own Firestore collection (collection name corresponds to `sensor_type`).
+- Each sensor category uses its own Firestore collection (collection name corresponds to `project_id`).
 - Documents are created using a deterministic document id that includes the sensor identifier and a timestamp (e.g., `{sensor_id}_{YYYY-MM-DD-HH:MM:SS}`).
 - Firestore acts as a storage layer for raw and near-real-time sensor events prior to final normalization and long-term analytical storage.
 
-**Important:** The document written to Firestore contains the parsed raw sensor data (including `sensor_id`) but does not include the `sensor_type` enrichment that is forwarded to the Normalizer API. Forwarding and Firestore writes are separate actions performed by the Cloud Run service.
+**Important:** The document written to Firestore contains the parsed raw sensor data (including `sensor_id`) but does not include the `project_id` enrichment that is forwarded to the Normalizer API. Forwarding and Firestore writes are separate actions performed by the Cloud Run service.
 
 ### 1.6 Forwarding Data to the Normalization API
 
-In addition to being stored in Firestore, the Cloud Run service forwards the enriched sensor data to the system's Normalizer REST API. The API endpoint is provided to the Cloud Run service through environment variables. The forwarded payload contains the original parsed measurement values together with the added `sensor_type` metadata, which identifies the sensor category.
+In addition to being stored in Firestore, the Cloud Run service forwards the enriched sensor data to the system's Normalizer REST API. The API endpoint is provided to the Cloud Run service through environment variables. The forwarded payload contains the original parsed measurement values together with the added `project_id` metadata, which identifies the sensor category.
 
 #### 1.6.1 Current Forwarding Scope
 
@@ -77,13 +77,13 @@ At the time of writing, forwarding sensor data to the Normalizer REST API is imp
 NORMALIZER_API_URL=<url to the Normalizer API webhook endpoint>
 ```
 
-When `NORMALIZER_API_URL` is set, the Cloud Run service will POST the enriched data object (original parsed fields + `sensor_type`) to the Normalizer API endpoint.
+When `NORMALIZER_API_URL` is set, the Cloud Run service will POST the enriched data object (original parsed fields + `project_id`) to the Normalizer API endpoint.
 
 ### 1.7 Data Reception in the Normalizer API
 
 When sensor data is forwarded from a Cloud Run service, it is received by the Normalizer REST API via the `/webhook` endpoint.
 
-The API is responsible for validating, normalizing, and transforming incoming sensor data into a consistent internal format before it is persisted to the database. The incoming payload is expected to include both the raw sensor measurements and the `sensor_type` field, which identifies the sensor category from which the data originates.
+The API is responsible for validating, normalizing, and transforming incoming sensor data into a consistent internal format before it is persisted to the database. The incoming payload is expected to include both the raw sensor measurements and the `project_id` field, which identifies the sensor category from which the data originates.
 
 ### 1.8 Sensor Data Normalization
 
@@ -104,7 +104,7 @@ The output of the normalization process is a list of dictionaries, each represen
    "sensor_id": clean_sensor_id,
    "metric_name": metric_name,
    "metric_value": metric_value,
-   "sensor_type": sensor_type,
+   "project_id": project_id,
 }
 ```
 
@@ -145,7 +145,7 @@ Instead of storing a single row with multiple columns for "temperature", "humidi
 
 **The `sensor_data` table structure is as follows:**
 
-| timestamp           | sensor_id     | metric_name | metric_value | sensor_type      |
+| timestamp           | sensor_id     | metric_name | metric_value | project_id      |
 | ------------------- | ------------- | ----------- | ------------ | ---------------- |
 | 2023-10-27 10:00:00 | env-sensor-01 | temperature | 22.5         | ymparistomoduuli |
 | 2023-10-27 10:00:00 | env-sensor-01 | humidity    | 60           | ymparistomoduuli |
@@ -158,7 +158,7 @@ To avoid data redundancy, static information about sensors is separated from the
 
 - **sensor_id:** Primary key of sensor Metadata table
 - **latitude / longitude:** Coordinates for Grafana visualization
-- **sensor_type:** category of sensor
+- **project_id:** category of sensor
 
 The separation of sensor measurement data and sensor metadata ensures that the high-volume time-series table remains devoid of redundancy while metadata is only joined for Grafana-based features and visualizations.
 
@@ -197,7 +197,7 @@ The request body must contain:
 
 - a valid `sensor_id`
 - measurement fields (e.g., temperature, humidity, pressure, etc.)
-- a `sensor_type` field provided by the Cloud Run service
+- a `project_id` field provided by the Cloud Run service
 
 The API does not assume a strict schema. Instead, it processes any number of unknown metric fields dynamically.
 
@@ -219,7 +219,7 @@ The end result of the parsing stage is a list of dictionaries:
     "sensor_id": "...",
     "metric_name": "...",
     "metric_value": "...",
-    "sensor_type": "..."
+    "project_id": "..."
 }
 ```
 

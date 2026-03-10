@@ -77,7 +77,7 @@ def mock_sync_status():
 def sample_sensor_data():
     """Sample sensor data for testing"""
     return {
-        "sensor_type": "temperature",
+        "project_id": "temperature",
         "sensor_id": "sensor_001",
         "timestamp": "2024-01-01T12:00:00",
         "temperature": 22.5,
@@ -92,7 +92,7 @@ def sample_sensor_metadata():
         "sensor_id": "sensor_001",
         "latitude": 60.1699,
         "longitude": 24.9384,
-        "sensor_type": "temperature"
+        "project_id": "temperature"
     }
 
 
@@ -128,7 +128,7 @@ class TestAddSensor:
         incomplete_data = {
             "sensor_id": "sensor_001",
             "latitude": 60.1699,
-            # Missing longitude and sensor_type
+            # Missing longitude and project_id
         }
         response = client.post("/api/sensors", json=incomplete_data)
 
@@ -140,7 +140,7 @@ class TestAddSensor:
             "sensor_id": "sensor_001",
             "latitude": "not_a_number",  # Should be float
             "longitude": 24.9384,
-            "sensor_type": "temperature"
+            "project_id": "temperature"
         }
         response = client.post("/api/sensors", json=invalid_data)
 
@@ -195,9 +195,9 @@ class TestFirestoreWebhook:
         mock_parser_instance.process_raw_sensor_data.assert_called_once_with(sample_sensor_data)
         mock_insert_rows.assert_called_once()
 
-    def test_webhook_missing_sensor_type(self, client):
-        """Test webhook with missing required sensor_type field"""
-        data = {"temperature": 22.5}  # Missing sensor_type
+    def test_webhook_missing_project_id(self, client):
+        """Test webhook with missing required project_id field"""
+        data = {"temperature": 22.5}  # Missing project_id
 
         response = client.post("/api/webhook", json=data)
 
@@ -290,7 +290,7 @@ class TestFirestoreWebhook:
         list_data = {
             "humidity": [65, 65, 65, 65, 65, 65, 65, 65],
             "sensor_id": "sensor_001",
-            "sensor_type": "temperature",
+            "project_id": "temperature",
             "temperature": [22.5, 22.5, 22.5, 22.5, 22.5, 22.5],
             "batch": 12
         }
@@ -404,13 +404,13 @@ class TestGetSensorMetadata:
         sample_metadata = [
             {
                 "sensor_id": "sensor_001",
-                "sensor_type": "temperature",
+                "project_id": "temperature",
                 "latitude": 60.1699,
                 "longitude": 24.9384
             },
             {
                 "sensor_id": "sensor_002",
-                "sensor_type": "humidity",
+                "project_id": "humidity",
                 "latitude": 60.2,
                 "longitude": 24.9
             }
@@ -563,7 +563,7 @@ class TestErrorHandling:
     def test_webhook_extra_fields_allowed(self, client, mock_sensor_parser):
         """Test that webhook accepts extra fields due to extra='allow'"""
         data_with_extras = {
-            "sensor_type": "temperature",
+            "project_id": "temperature",
             "sensor_id": "sensor_001",
             "temperature": 22.5,
             "custom_field_1": "value1",

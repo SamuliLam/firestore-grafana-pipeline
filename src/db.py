@@ -22,7 +22,7 @@ class SensorMetadata(Base):
     description = Column(Text, nullable=True)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-    sensor_type = Column(String(50), nullable=False)
+    project_id = Column(String(50), nullable=False)
 
 
 class SensorData(Base):
@@ -32,7 +32,7 @@ class SensorData(Base):
     sensor_id = Column(String(50), primary_key=True, nullable=False)
     metric_name = Column(String(100), primary_key=True, nullable=False)
     metric_value = Column(Text, nullable=False)
-    sensor_type = Column(String(50), nullable=False)
+    project_id = Column(String(50), nullable=False)
 
 
 # Database Functions
@@ -81,7 +81,7 @@ def get_all_sensor_metadata() -> list[dict]:
                 "description": row.description,
                 "latitude": row.latitude,
                 "longitude": row.longitude,
-                "sensor_type": row.sensor_type,
+                "project_id": row.project_id,
             }
             for row in results
         ]
@@ -126,23 +126,25 @@ def delete_sensor(sensor_id: str):
         return deleted
 
 
-def get_oldest_timestamp_from_db(collection_name: str) -> Optional[datetime]:
+def get_oldest_timestamp_from_db(project_id: str) -> Optional[datetime]:
     engine = get_engine()
     with Session(engine) as session:
         oldest = (
             session.query(func.min(SensorData.timestamp))
-            .filter(SensorData.sensor_type == collection_name)
+            .filter(SensorData.project_id == project_id)
             .scalar()
         )
         return oldest
 
 
-def get_newest_timestamp_from_db(collection_name: str) -> Optional[datetime]:
+def get_newest_timestamp_from_db(project_id: str) -> Optional[datetime]:
     engine = get_engine()
     with Session(engine) as session:
         newest = (
             session.query(func.max(SensorData.timestamp))
-            .filter(SensorData.sensor_type == collection_name)
+            .filter(SensorData.project_id == project_id)
             .scalar()
         )
         return newest
+
+

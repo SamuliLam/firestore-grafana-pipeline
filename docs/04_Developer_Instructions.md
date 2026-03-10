@@ -75,7 +75,7 @@ To enable forwarding behavior for additional sensor categories, the correspondin
 
 #### Including the API forwarding logic in the service's source code — example:
 
-Below is an example of the forwarding snippet that services should include. It assumes the service already has parsed the incoming data into a `data` dictionary and that `COLLECTION` contains the sensor category name. The snippet creates an `enriched_doc` containing the `sensor_type` and posts it to the Normalizer API if `NORMALIZER_API_URL` is configured:
+Below is an example of the forwarding snippet that services should include. It assumes the service already has parsed the incoming data into a `data` dictionary and that `COLLECTION` contains the sensor category name. The snippet creates an `enriched_doc` containing the `project_id` and posts it to the Normalizer API if `NORMALIZER_API_URL` is configured:
 
 ```python
 import requests
@@ -84,9 +84,9 @@ import os
 # Load API URL from environment variables
 NORMALIZER_API_URL = os.environ.get("NORMALIZER_API_URL")
 
-# enriched_doc: original parsed data (contains sensor_id) plus sensor_type
+# enriched_doc: original parsed data (contains sensor_id) plus project_id
 enriched_doc = dict(data)
-enriched_doc.update({"sensor_type": COLLECTION})
+enriched_doc.update({"project_id": COLLECTION})
 
 
 if NORMALIZER_API_URL:

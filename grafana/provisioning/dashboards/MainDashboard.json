@@ -245,7 +245,7 @@
         "sortBy": [
           {
             "desc": true,
-            "displayName": "sensor_type"
+            "displayName": "project_id"
           }
         ]
       },
@@ -255,7 +255,7 @@
           "dataset": "sensor_data",
           "editorMode": "builder",
           "format": "table",
-          "rawSql": "SELECT sensor_id, sensor_type, latitude, longitude FROM sensor_metadata LIMIT 50 ",
+          "rawSql": "SELECT sensor_id, project_id, latitude, longitude FROM sensor_metadata LIMIT 50 ",
           "refId": "A",
           "sql": {
             "columns": [
@@ -271,7 +271,7 @@
               {
                 "parameters": [
                   {
-                    "name": "sensor_type",
+                    "name": "project_id",
                     "type": "functionParameter"
                   }
                 ],

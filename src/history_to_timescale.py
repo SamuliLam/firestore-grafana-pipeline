@@ -25,6 +25,14 @@ def get_firestore_client():
 COLLECTIONS = os.getenv("FIRESTORE_COLLECTIONS", "").split(",")
 
 
+def get_all_firestore_project_ids():
+    client = get_firestore_client()
+    project_docs = client.collection("projects").list_documents()
+    project_ids = [doc.id for doc in project_docs]
+    print(f"Discovery found {len(project_ids)} projects in Firestore: {project_ids}")
+    return project_ids
+
+
 def sync_firestore_to_timescale():
     sync_status["state"] = "running"
     sync_status["error"] = None
@@ -37,25 +45,29 @@ def sync_firestore_to_timescale():
         return
 
     try:
-        for collection_name in COLLECTIONS:
-            newest_ts = get_newest_timestamp_from_db(collection_name)
-            oldest_ts = get_oldest_timestamp_from_db(collection_name)
-            parser = SensorDataParser(collection_name)
+        project_ids = get_all_firestore_project_ids()
 
-            query = client.collection(collection_name)
+        for pid in project_ids:
+
+            newest_ts = get_newest_timestamp_from_db(pid)
+            oldest_ts = get_oldest_timestamp_from_db(pid)
+
+            parser = SensorDataParser(pid)
+
+            query_base = client.collection_group("readings").where("project_id", "==", pid)
+
+            new_query = query_base
             if newest_ts:
-                query = query.where("timestamp", ">", newest_ts)
+                new_query = new_query.where("timestamp", ">", newest_ts)
 
-            new_docs = query.stream()
-            process_and_batch_save(new_docs, parser)
+            print(f"Fetching new records for {pid}...")
+            process_and_batch_save(new_query.stream(), parser, pid)
 
             if oldest_ts:
-                print(f"Checking for history older than {oldest_ts}...")
-                history_docs = client.collection(collection_name) \
-                    .where("timestamp", "<", oldest_ts) \
-                    .order_by("timestamp", direction=firestore.Query.DESCENDING) \
-                    .stream()
-                process_and_batch_save(history_docs, parser)
+                print(f"Checking for older history for {pid} (before {oldest_ts})...")
+                hist_query = query_base.where("timestamp", "<", oldest_ts) \
+                    .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                process_and_batch_save(hist_query.stream(), parser, pid)
 
         sync_status["state"] = "success"
     except Exception as e:
@@ -66,19 +78,20 @@ def sync_firestore_to_timescale():
         print("Synchronization process completed.")
 
 
-def process_and_batch_save(docs, parser):
+def process_and_batch_save(docs, parser, project_id):
     current_chunk = []
-    chunk_limit = 20000
     total_processed = 0
 
-    print("Starting stream processing...")
-
     for doc in docs:
-        rows = parser.process_raw_sensor_data(doc.to_dict())
+        raw_data = doc.to_dict()
+        rows = parser.process_raw_sensor_data(raw_data)
+
         if rows:
+            for row in rows:
+                row["project_id"] = project_id
             current_chunk.extend(rows)
 
-        if len(current_chunk) >= chunk_limit:
+        if len(current_chunk) >= 5000:
             save_now(current_chunk)
             total_processed += len(current_chunk)
             current_chunk = []
@@ -87,7 +100,8 @@ def process_and_batch_save(docs, parser):
         save_now(current_chunk)
         total_processed += len(current_chunk)
 
-    print(f"Sync complete! Total rows processed: {total_processed}")
+    if total_processed > 0:
+        print(f"Successfully synced {total_processed} rows for project {project_id}")
 
 
 def save_now(rows_to_save):

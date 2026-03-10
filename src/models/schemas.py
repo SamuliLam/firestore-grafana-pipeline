@@ -11,7 +11,7 @@ class SensorMetadataInput(BaseModel):
                 "description": "Outdoor temperature sensor",
                 "latitude": 60.1699,
                 "longitude": 24.9384,
-                "sensor_type": "viherpysakki"
+                "project_id": "myyrmäki_katupuu"
             }
         }
     )
@@ -20,7 +20,7 @@ class SensorMetadataInput(BaseModel):
     description: Optional[str] = Field(None, description="Description of the sensor")
     latitude: float = Field(..., description="Latitude coordinate")
     longitude: float = Field(..., description="Longitude coordinate")
-    sensor_type: str = Field(..., description="Type of sensor")
+    project_id: str = Field(..., description="What project the sensor belongs to")
 
 
 class WebhookData(BaseModel):
@@ -29,7 +29,7 @@ class WebhookData(BaseModel):
         extra="allow",  # Allow additional fields for flexible sensor data
         json_schema_extra={
             "example": {
-                "sensor_type": "viherpysakki",
+                "project_id": "myyrmäki_katupuu",
                 "sensor_id": "sensor_001",
                 "timestamp": "2025-12-12T10:30:00",
                 "temperature": 22.5,
@@ -38,4 +38,4 @@ class WebhookData(BaseModel):
         }
     )
 
-    sensor_type: str = Field(..., description="Type of sensor")
+    project_id: str = Field(..., description="What project the sensor belongs to")

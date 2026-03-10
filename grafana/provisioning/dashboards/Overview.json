@@ -92,7 +92,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\r\n  \"timestamp\" AS time,\r\n  CAST(metric_value AS FLOAT) AS \"$metric\"\r\nFROM sensor_data\r\nWHERE\r\n  sensor_type = '$project'\r\n  AND sensor_id IN (${sensor:sqlstring})\r\n  AND metric_name = '$metric'\r\n  AND $__timeFilter(\"timestamp\")\r\nORDER BY time;",
+          "rawSql": "SELECT\r\n  \"timestamp\" AS time,\r\n  CAST(metric_value AS FLOAT) AS \"$metric\"\r\nFROM sensor_data\r\nWHERE\r\n  project_id = '$project'\r\n  AND sensor_id IN (${sensor:sqlstring})\r\n  AND metric_name = '$metric'\r\n  AND $__timeFilter(\"timestamp\")\r\nORDER BY time;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -360,7 +360,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\r\n  \"timestamp\" AS time,\r\n  CAST(metric_value AS FLOAT) AS \"$metric\"\r\nFROM sensor_data\r\nWHERE\r\n  sensor_type = '$project'\r\n  AND metric_name = '$metric'\r\n  AND $__timeFilter(\"timestamp\")\r\nORDER BY time;",
+          "rawSql": "SELECT\r\n  \"timestamp\" AS time,\r\n  CAST(metric_value AS FLOAT) AS \"$metric\"\r\nFROM sensor_data\r\nWHERE\r\n  project_id = '$project'\r\n  AND metric_name = '$metric'\r\n  AND $__timeFilter(\"timestamp\")\r\nORDER BY time;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -582,7 +582,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\r\n  \"timestamp\" AS time,\r\n  CAST(metric_value AS FLOAT) AS value,\r\n  -- TÄMÄ LUO KIINTEÄN TUNNISTEEN REGEXIÄ VARTEN:\r\n  CASE \r\n    WHEN metric_name = '$metric_A' THEN '$metric_A (A)'\r\n    WHEN metric_name = '$metric_B' THEN '$metric_B (B)'\r\n  END AS metric\r\nFROM sensor_data\r\nWHERE\r\n  sensor_type = '$project'\r\n  AND metric_name IN ('$metric_A', '$metric_B')\r\n  AND $__timeFilter(\"timestamp\")\r\nORDER BY time;",
+          "rawSql": "SELECT\r\n  \"timestamp\" AS time,\r\n  CAST(metric_value AS FLOAT) AS value,\r\n  -- TÄMÄ LUO KIINTEÄN TUNNISTEEN REGEXIÄ VARTEN:\r\n  CASE \r\n    WHEN metric_name = '$metric_A' THEN '$metric_A (A)'\r\n    WHEN metric_name = '$metric_B' THEN '$metric_B (B)'\r\n  END AS metric\r\nFROM sensor_data\r\nWHERE\r\n  project_id = '$project'\r\n  AND metric_name IN ('$metric_A', '$metric_B')\r\n  AND $__timeFilter(\"timestamp\")\r\nORDER BY time;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -629,12 +629,12 @@
           "text": "myyrmäki_katupuu",
           "value": "myyrmäki_katupuu"
         },
-        "definition": "SELECT DISTINCT sensor_type FROM sensor_data;",
+        "definition": "SELECT DISTINCT project_id FROM sensor_data;",
         "includeAll": false,
         "label": "Choose a project",
         "name": "project",
         "options": [],
-        "query": "SELECT DISTINCT sensor_type FROM sensor_data;",
+        "query": "SELECT DISTINCT project_id FROM sensor_data;",
         "refresh": 1,
         "regex": "",
         "type": "query"
@@ -646,14 +646,14 @@
             "$__all"
           ]
         },
-        "definition": "SELECT DISTINCT metric_name FROM sensor_data \nWHERE sensor_type = '$project' \nAND sensor_id IN (${sensor:sqlstring});",
+        "definition": "SELECT DISTINCT metric_name FROM sensor_data \nWHERE project_id = '$project' \nAND sensor_id IN (${sensor:sqlstring});",
         "description": "",
         "includeAll": true,
         "label": "Metric",
         "multi": true,
         "name": "metric",
         "options": [],
-        "query": "SELECT DISTINCT metric_name FROM sensor_data \nWHERE sensor_type = '$project' \nAND sensor_id IN (${sensor:sqlstring});",
+        "query": "SELECT DISTINCT metric_name FROM sensor_data \nWHERE project_id = '$project' \nAND sensor_id IN (${sensor:sqlstring});",
         "refresh": 1,
         "regex": "",
         "type": "query"
@@ -665,14 +665,14 @@
             "$__all"
           ]
         },
-        "definition": "SELECT DISTINCT sensor_id FROM sensor_data WHERE sensor_type = '$project';",
+        "definition": "SELECT DISTINCT sensor_id FROM sensor_data WHERE project_id = '$project';",
         "description": "",
         "includeAll": true,
         "label": "Filter sensors",
         "multi": true,
         "name": "sensor",
         "options": [],
-        "query": "SELECT DISTINCT sensor_id FROM sensor_data WHERE sensor_type = '$project';",
+        "query": "SELECT DISTINCT sensor_id FROM sensor_data WHERE project_id = '$project';",
         "refresh": 1,
         "regex": "",
         "type": "query"
@@ -682,12 +682,12 @@
           "text": "air_pressure_kPa",
           "value": "air_pressure_kPa"
         },
-        "definition": "SELECT DISTINCT metric_name FROM sensor_data WHERE sensor_type = '$project';",
+        "definition": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project';",
         "description": "",
         "label": "Comparison variable 1",
         "name": "metric_A",
         "options": [],
-        "query": "SELECT DISTINCT metric_name FROM sensor_data WHERE sensor_type = '$project';",
+        "query": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project';",
         "refresh": 1,
         "regex": "",
         "type": "query"
@@ -697,12 +697,12 @@
           "text": "air_temperature",
           "value": "air_temperature"
         },
-        "definition": "SELECT DISTINCT metric_name FROM sensor_data WHERE sensor_type = '$project';",
+        "definition": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project';",
         "description": "",
         "label": "Comparison variable 2",
         "name": "metric_B",
         "options": [],
-        "query": "SELECT DISTINCT metric_name FROM sensor_data WHERE sensor_type = '$project';",
+        "query": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project';",
         "refresh": 1,
         "regex": "",
         "type": "query"

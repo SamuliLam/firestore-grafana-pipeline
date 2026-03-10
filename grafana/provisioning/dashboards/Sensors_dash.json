@@ -892,11 +892,11 @@
           "text": "ymparistomoduuli",
           "value": "ymparistomoduuli"
         },
-        "definition": "SELECT DISTINCT sensor_type FROM sensor_data",
+        "definition": "SELECT DISTINCT project_id FROM sensor_data",
         "description": "Valitse sensorin kategoria",
         "name": "category",
         "options": [],
-        "query": "SELECT DISTINCT sensor_type FROM sensor_data",
+        "query": "SELECT DISTINCT project_id FROM sensor_data",
         "refresh": 1,
         "regex": "",
         "type": "query"
@@ -911,13 +911,13 @@
             "$__all"
           ]
         },
-        "definition": "SELECT DISTINCT sensor_id FROM sensor_data WHERE sensor_type = '${category}'",
+        "definition": "SELECT DISTINCT sensor_id FROM sensor_data WHERE project_id = '${category}'",
         "description": "Etsii sensorin ID:llä",
         "includeAll": true,
         "multi": true,
         "name": "sensorID",
         "options": [],
-        "query": "SELECT DISTINCT sensor_id FROM sensor_data WHERE sensor_type = '${category}'",
+        "query": "SELECT DISTINCT sensor_id FROM sensor_data WHERE project_id = '${category}'",
         "refresh": 1,
         "regex": "",
         "type": "query"
