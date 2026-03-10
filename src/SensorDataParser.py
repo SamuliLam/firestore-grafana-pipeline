@@ -27,7 +27,7 @@ class SensorDataParser:
             return []
 
         if not self.cached_id_field:
-            self.cached_id_field = find_field_name(raw_data, self.id_fields)
+            self.cached_id_field = _find_field_name(raw_data, self.id_fields)
 
         raw_id_val = raw_data.get(self.cached_id_field) if self.cached_id_field else None
         sensor_id = raw_id_val.replace(":", "") if raw_id_val else None
@@ -40,23 +40,23 @@ class SensorDataParser:
         first_key_as_timestamp = None
 
         if not is_nested:
-            return self.convert_to_normalized_format(raw_data, sensor_id, None)
+            return self._convert_to_normalized_format(raw_data, sensor_id, None)
 
         first_key = next(iter(raw_data))
-        parsed_time = SensorDataParser.parse_timestamp(first_key, use_default=False)
+        parsed_time = self._parse_timestamp(first_key, use_default=False)
         if parsed_time:
             first_key_as_timestamp = parsed_time
 
-        extracted_id, data = extract_sensor_and_metrics(raw_data)
+        extracted_id, data = _extract_sensor_and_metrics(raw_data)
         final_id = sensor_id or (extracted_id.replace(":", "") if extracted_id else None)
 
         if not final_id:
             return []
 
-        return self.convert_to_normalized_format(data, final_id, first_key_as_timestamp)
+        return self._convert_to_normalized_format(data, final_id, first_key_as_timestamp)
 
-    def convert_to_normalized_format(self, data: dict, sensor_id: str | None,
-                                     first_key_ts: datetime.datetime | None) -> List[dict]:
+    def _convert_to_normalized_format(self, data: dict, sensor_id: str | None,
+                                      first_key_ts: datetime.datetime | None) -> List[dict]:
         rows = []
         sensor_data_as_list = data if isinstance(data, list) else [data]
 
@@ -68,43 +68,43 @@ class SensorDataParser:
             metrics = {**actual_measurements, **extra_fields}
 
             try:
-                rows.extend(self.parse_sensor_item(sensor_reading, metrics, sensor_id, first_key_ts))
+                rows.extend(self._parse_sensor_item(sensor_reading, metrics, sensor_id, first_key_ts))
             except ValueError:
                 continue
 
         return rows
 
-    def parse_sensor_item(self, item: dict, metrics: dict, sensor_id: str | None,
-                          first_key_ts: datetime.datetime | None) -> List[dict]:
+    def _parse_sensor_item(self, item: dict, metrics: dict, sensor_id: str | None,
+                           first_key_ts: datetime.datetime | None) -> List[dict]:
 
         project_id = item.get("project_id", self.project_id)
 
         if not self.cached_ts_field:
-            self.cached_ts_field = find_field_name(item, self.ts_fields)
+            self.cached_ts_field = _find_field_name(item, self.ts_fields)
 
         item_timestamp_val = item.get(self.cached_ts_field) if self.cached_ts_field else None
 
         if item_timestamp_val:
-            base_time = self.parse_timestamp(item_timestamp_val)
+            base_time = self._parse_timestamp(item_timestamp_val)
         elif first_key_ts:
             base_time = first_key_ts
         else:
-            base_time = self.parse_timestamp(None)
+            base_time = self._parse_timestamp(None)
 
         rows = []
         for metric_name, metric_value in metrics.items():
             if isinstance(metric_value, list):
                 rows.extend(
-                    self.parse_list_metric(metric_name, metric_value, sensor_id, project_id, base_time)
+                    self._parse_list_metric(metric_name, metric_value, sensor_id, project_id, base_time)
                 )
             else:
-                row = self.create_sensor_row(metric_name, metric_value, sensor_id, project_id, base_time)
+                row = self._create_sensor_row(metric_name, metric_value, sensor_id, project_id, base_time)
                 if row:
                     rows.append(row)
 
         return rows
 
-    def parse_timestamp(self, f_timestamp, use_default: bool = True) -> datetime.datetime | None:
+    def _parse_timestamp(self, f_timestamp, use_default: bool = True) -> datetime.datetime | None:
         if not f_timestamp:
             return datetime.datetime.now(tz=self.tz_utc) if use_default else None
 
@@ -121,7 +121,7 @@ class SensorDataParser:
 
         if isinstance(f_timestamp, str):
             if f_timestamp.replace('.', '', 1).isdigit():
-                return self.parse_timestamp(float(f_timestamp), use_default)
+                return self._parse_timestamp(float(f_timestamp), use_default)
 
             try:
                 dt = datetime.datetime.fromisoformat(f_timestamp)
@@ -134,7 +134,7 @@ class SensorDataParser:
         return datetime.datetime.now(tz=self.tz_utc) if use_default else None
 
     @staticmethod
-    def parse_list_metric(
+    def _parse_list_metric(
             metric_name: str,
             metric_values: list,
             sensor_id: str,
@@ -144,13 +144,13 @@ class SensorDataParser:
         rows = []
         for i, val in enumerate(reversed(metric_values)):
             ts = base_time - datetime.timedelta(minutes=LIST_VALUE_INTERVAL_MINUTES * i)
-            row = SensorDataParser.create_sensor_row(metric_name, val, sensor_id, project_id, ts)
+            row = SensorDataParser._create_sensor_row(metric_name, val, sensor_id, project_id, ts)
             if row:
                 rows.append(row)
         return rows
 
     @staticmethod
-    def create_sensor_row(
+    def _create_sensor_row(
             metric_name: str,
             metric_value,
             sensor_id: str,
@@ -173,14 +173,14 @@ class SensorDataParser:
         }
 
 
-def extract_sensor_and_metrics(d: dict):
+def _extract_sensor_and_metrics(d: dict):
     key = next(iter(d))
     value = d[key]
 
     if isinstance(value, str):
         try:
             parsed = json.loads(value)
-            return extract_sensor_and_metrics({key: parsed})
+            return _extract_sensor_and_metrics({key: parsed})
         except json.JSONDecodeError:
             return None, {}
 
@@ -188,7 +188,7 @@ def extract_sensor_and_metrics(d: dict):
         if all(isinstance(v, list) for v in value.values()):
             return key, value
         else:
-            return extract_sensor_and_metrics(value)
+            return _extract_sensor_and_metrics(value)
 
     return None, {}
 
@@ -204,7 +204,7 @@ def _value_looks_nested(value):
     return False
 
 
-def find_field_name(raw_data: dict, possible_fields: set) -> str | None:
+def _find_field_name(raw_data: dict, possible_fields: set) -> str | None:
     for f in possible_fields:
         if f in raw_data:
             return f
