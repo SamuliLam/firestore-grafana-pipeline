@@ -57,20 +57,15 @@ class SensorDataParser:
 
     def convert_to_normalized_format(self, data: dict, sensor_id: str | None,
                                      first_key_ts: datetime.datetime | None) -> List[dict]:
-        """
-        Parse incoming JSON data into SensorData objects in EAV format.
-        """
         rows = []
-
-        # Handle both single object and array of objects
         sensor_data_as_list = data if isinstance(data, list) else [data]
 
         for sensor_reading in sensor_data_as_list:
+            actual_measurements = sensor_reading.get("measurements", {})
 
-            metrics = {
-                k: v for k, v in sensor_reading.items()
-                if k not in self.ignored_fields
-            }
+            extra_fields = sensor_reading.get("extra", {})
+
+            metrics = {**actual_measurements, **extra_fields}
 
             try:
                 rows.extend(self.parse_sensor_item(sensor_reading, metrics, sensor_id, first_key_ts))
@@ -214,4 +209,3 @@ def find_field_name(raw_data: dict, possible_fields: set) -> str | None:
         if f in raw_data:
             return f
     return None
-
