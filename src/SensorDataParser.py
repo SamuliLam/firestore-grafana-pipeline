@@ -34,12 +34,11 @@ class SensorDataParser:
         rows = []
 
         actual_measurements = sensor_reading.get("measurements", {})
-        extra_fields = sensor_reading.get("extra", {})
 
-        if not actual_measurements and not extra_fields:
+        if not actual_measurements:
             metrics = {k: v for k, v in sensor_reading.items() if k not in self.ignored_fields}
         else:
-            metrics = {**actual_measurements, **extra_fields}
+            metrics = {**actual_measurements}
 
         if not metrics:
             return []
@@ -59,6 +58,11 @@ class SensorDataParser:
 
         val = item.get(self.cached_ts_field) if self.cached_ts_field else None
 
+        if isinstance(val, datetime.datetime):
+            if val.tzinfo:
+                return val.astimezone(self.tz_utc)
+            return val.replace(tzinfo=self.tz_helsinki).astimezone(self.tz_utc)
+
         if isinstance(val, DatetimeWithNanoseconds):
             return val.astimezone(self.tz_utc)
 
@@ -74,7 +78,7 @@ class SensorDataParser:
             except ValueError:
                 pass
 
-        return datetime.datetime.now(tz=self.tz_utc)
+        raise ValueError("Timestamp field missing or invalid")
 
     @staticmethod
     def _create_sensor_row(metric_name: str, metric_value, sensor_id: str | None, project_id: str,
