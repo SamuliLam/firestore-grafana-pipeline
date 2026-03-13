@@ -14,7 +14,7 @@ from src.db import (
     get_engine,
     insert_sensor_rows,
     insert_sensor_metadata,
-    delete_sensor,
+    delete_sensor_metadata,
     sensor_exists_in_data,
     get_oldest_collection_timestamp_from_db,
 )
@@ -138,7 +138,7 @@ def test_delete_sensor(session):
     session.add(row)
     session.commit()
 
-    deleted_count = delete_sensor("S4")
+    deleted_count = delete_sensor_metadata("S4")
     assert deleted_count == 1
 
     assert session.query(SensorMetadata).filter_by(sensor_id="S4").first() is None

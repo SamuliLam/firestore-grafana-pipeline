@@ -1,26 +1,38 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from typing import Optional, Dict
 
 
 class SensorMetadataInput(BaseModel):
-    """Input model for creating/updating sensor metadata"""
+    """Input model for creating/updating sensor metadata and configuration"""
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "sensor_id": "sensor_001",
+                "sensor_id": "C6:31:F5:...",
                 "description": "Outdoor temperature sensor",
                 "latitude": 60.1699,
                 "longitude": 24.9384,
-                "project_id": "myyrmäki_katupuu"
+                "project_id": "myyrmaki-test",
+                "ts_field": "ts",
+                "mapping": {
+                    "t": "temperature",
+                    "h": "humidity",
+                    "p": "pressure"
+                }
             }
         }
     )
 
-    sensor_id: str = Field(..., description="Unique identifier for the sensor")
+    sensor_id: str = Field(..., description="Unique identifier (MAC) for the sensor")
     description: Optional[str] = Field(None, description="Description of the sensor")
     latitude: float = Field(..., description="Latitude coordinate")
     longitude: float = Field(..., description="Longitude coordinate")
     project_id: str = Field(..., description="What project the sensor belongs to")
+
+    ts_field: str = Field(default="ts", description="The key name for the timestamp in raw data")
+    mapping: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Dictionary mapping raw data keys to clean measurement names"
+    )
 
 
 class WebhookData(BaseModel):

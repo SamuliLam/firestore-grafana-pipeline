@@ -114,16 +114,16 @@ def insert_sensor_rows(dict_rows: list[dict]):
         print(f"Saved {len(dict_rows)} rows to table {SensorData.__tablename__}.")
 
 
-def delete_sensor(sensor_id: str):
+def delete_sensor_metadata(sensor_id: str) -> int:
     engine = get_engine()
     with Session(engine) as session:
-        deleted = session.query(SensorMetadata).filter(
+        deleted_count = session.query(SensorMetadata).filter(
             SensorMetadata.sensor_id == sensor_id
         ).delete()
 
         session.commit()
-
-        return deleted
+        print(f"Deleted {deleted_count} metadata rows for sensor {sensor_id}.")
+        return deleted_count
 
 
 def get_oldest_timestamp_from_db(project_id: str) -> Optional[datetime]:
