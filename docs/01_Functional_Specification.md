@@ -84,7 +84,8 @@ The system was implemented as a browser-based application so it can be used with
 
 ```mermaid
 graph TD
-    A[IoT Sensors] -->|Publish JSON data| B[Google Cloud Pub/Sub Topics]
+    E[Sensor Data Ingestion API]
+    A[IoT Sensors] -->|Publish JSON data| B[Google Cloud Pub/Sub Topic]
     B -->|Trigger events| C[Cloud Run Services]
     C -->|Parse & enrich| D[Firestore Collections]
     E -->|Loads Sensor Data| D[Firestore Collections]
