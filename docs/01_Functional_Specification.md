@@ -23,11 +23,17 @@ The product is a web application hosted at envidata.metropolia.fi.
 
 # 2. Glossary
 
-- **VM / Virtual Machine** – A virtual machine where the backend of the project is run.  
-- **Firestore** – A cloud database service used to store sensor data.  
-- **SensorID** – An identifier used to distinguish sensors.  
-- **TimescaleDB** – A time-series database optimized for timestamped data.  
-- **Grafana** – A platform used for sensor data visualization.  
+* **Cloud Run** – A managed serverless compute platform by Google that runs the data processing logic. It automatically processes incoming sensor messages triggered by Eventarc.
+* **Firestore** – A cloud-based NoSQL database used for storing sensor configurations, metadata, and temporary storage for unconfigured sensor readings.
+* **Pub/Sub** – An asynchronous messaging service that receives raw sensor data and buffers it for processing, ensuring data integrity during traffic spikes.
+* **Eventarc** – A service that acts as a trigger between Pub/Sub and Cloud Run; it reacts to new messages and invokes the processing code.
+* **TimescaleDB** – A PostgreSQL-based time-series database optimized for high-volume data storage and fast analytical queries. Used for long-term historical data.
+* **Grafana** – An open-source visualization suite integrated into the frontend. It generates dynamic graphs and dashboards directly from TimescaleDB data.
+* **Metropolia VM (Virtual Machine)** – An internal virtual server hosted by Metropolia that runs the web application (Frontend) and the Management API (Backend) as Docker containers.
+* **SensorID / MAC** – A unique physical identifier (usually a MAC address) used to route data from a specific hardware device to the correct project.
+* **Backfill** – An automated process that moves and transforms historical sensor data from the "Unknown" collection to the correct project-specific path after a sensor is configured.
+* **EAV (Entity-Attribute-Value)** – A data modeling technique used for flexible sensor data storage, allowing various metrics to be stored without fixed table schemas.
+* **RBAC (Role-Based Access Control)** – A security model that restricts system access to authorized users based on their roles (e.g., User vs. Administrator).
 
 # 3. Use Cases / Overview
 
