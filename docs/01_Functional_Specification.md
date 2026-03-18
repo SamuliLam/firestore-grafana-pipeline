@@ -13,7 +13,13 @@
 
 # 1. Introduction
 
-The purpose of the application is to view sensor values and allow the user to add and remove sensors. Sensors are visualized on a map, and the data they produce is displayed using various metrics such as average and median. Graphs are also created from the data, making it easy to examine values collected over a selected time period. The product is a web-based application.
+The primary purpose of the application is to facilitate the monitoring of environmental projects by displaying time-series sensor data and comprehensive statistics. The platform serves two main user roles:
+
+Administrators: Can manage the system by adding, removing, and configuring sensors. This includes defining data mapping logic to ensure raw sensor inputs are correctly transformed into meaningful environmental metrics.
+
+Users/Researchers: Can monitor environmental conditions through dynamic visualizations. The system provides tools for analyzing trends, comparing variables, viewing statistical summaries (such as averages and medians), and examining historical data over custom time periods.
+
+The product is a web application hosted at envidata.metropolia.fi.
 
 # 2. Glossary
 
@@ -25,15 +31,25 @@ The purpose of the application is to view sensor values and allow the user to ad
 
 # 3. Use Cases / Overview
 
-The application is designed to run on a Virtual machine (VM). The program requires both the frontend and backend to be running. Once these are active, the user can open a browser and go to the website. The VM is accessed via a VPN connection. The VPN requires logging in with Metropolia credentials.
+The application is a cloud-native platform accessible via **envidata.metropolia.fi**. Security is managed through a **Request Access** authentication system, where users must be authorized to access the environmental data and management tools.
 
-The application is used to visualize sensor data and provides multiple ways to review the information received from sensors. The homepage features a map showing sensor locations, along with a list of sensors displayed under the map. On the left side of the map, a panel allows users to add or delete sensors. Above the map, the *“Load history”* button retrieves historical sensor data from the database. A search field for SensorID is located in the upper-right corner of the page. Entering a string filters the sensor list below the map to show only sensors whose ID contains the entered characters, helping users find sensors easily.
+### Initial Discovery & Configuration
+When a new sensor is deployed, it automatically begins publishing data to the system. If the sensor's unique ID (MAC address) is not yet recognized, the system routes the data to an **"Unconfigured Sensors"** list. This allows administrators to "discover" new hardware without manual database entries. From the management panel, an admin can then:
+* Assign the sensor to a specific **Project**.
+* Define the **Data Logic & Mapping** (e.g., mapping raw key `t` to the metric `temperature`).
+* Set the geographical coordinates for the map view.
 
-Clicking a sensor in the list navigates the user to a detailed view showing the sensor’s historical temperature and humidity changes as graphs. This is a sensor-specific view. The most recently received temperature or humidity value is shown to the right of the graphs. Users can also choose which time range they want to view by selecting a timespan above the latest temperature reading. In this view, it is also possible to switch to another sensor by choosing a different SensorID above the temperature graph.
+### Automated Backfilling
+Once a sensor is configured, the system automatically triggers a **Backfill** process. This logic moves all historical readings that were temporarily stored as "unknown" into the correct project-specific collections, ensuring no data is lost during the setup phase.
 
-In the center of the website’s navigation bar is the *“Sensors”* section, which leads to the general sensor overview. In this overview, the user first selects the category of sensors they want to inspect. After selecting a category, SensorID-based filtering is available. Once a category is selected, temperature, humidity, and—if available—air pressure data is displayed, each with its own graph for the chosen time range. Below the graphs is a dashboard showing the median, average, standard deviation, and latest measurement for each metric. Under the dashboard is a table listing the collected sensor data, and at the bottom is the database information from which the data was retrieved.
+### Dynamic Data Visualization
+The core value of the application is its ability to handle any environmental metric without code changes. 
+* **Map View:** The homepage provides a geographic overview of all active sensors. Filtering by SensorID or Project helps users locate specific nodes quickly.
+* **Sensor Detail View:** Clicking a sensor opens a specialized view where **Grafana dashboards are rendered dynamically**. The system identifies all mapped metrics (e.g., soil moisture, EC, temperature) and generates real-time graphs for each.
+* **Statistical Analysis:** Users can select custom time ranges to view calculated statistics, including **averages, medians, and standard deviations** for every available metric.
 
-It is important to set the correct error message and use guiding colors to make the website easy to use. Generally the website uses the color red for errors and if something was done successfully a green text is displayed. When submitting a form in the AddSensor or RemoveSensor panels these errors can appear depending on the user input.
+### Data Management
+The application provides clear visual feedback for most operations. A **green notification** confirms successful sensor updates or backfills, while **red alerts** signal configuration errors or invalid mapping logic.
 # 4. User Requirements
 
 User requirements for the project are as follows:
@@ -47,38 +63,50 @@ User requirements for the project are as follows:
 
 # 5. System Architecture
 
-The system components are: Sensor, Firestore, Google Cloud Run, Backend, and Frontend.
+The components are: **IoT Sensors, Google Cloud Pub/Sub, Eventarc, Cloud Run, Firestore, Python API (FastAPI), and React Frontend with Integrated Grafana.**
 
-The sensor is configured to send data to Firestore. Firestore is a cloud database where the received data is stored. Google Cloud Run uses this service, and a dedicated Cloud Run function fetches the required data from Firestore and forwards it to the backend.
+### Data Ingestion Pipeline
+1. **IoT Sensors:** Physical devices (e.g., TEROS 12, RuuviTag) publish raw JSON data to a specific **Google Cloud Pub/Sub Topic**.
+2. **Eventarc Trigger:** An Eventarc trigger listens to the Pub/Sub topic and automatically invokes the **Cloud Run** processing service for every incoming message.
+3. **Cloud Run (Processor):** This service acts as the central logic hub. It:
+    * Performs a lookup from **Firestore** to find the sensor's configuration (Project ID and Mapping).
+    * If the sensor is unknown, it routes the raw data to the `unconfigured_sensors` collection.
+    * If configured, it applies the mapping logic to transform raw keys into standardized metrics.
+    * Forwards the normalized data to **TimescaleDB** for long-term storage and **Firestore** for real-time status.
 
-For the backend to communicate with Cloud Run, Cloud Run user credentials (in JSON format) are required. These credentials are stored in the root of the backend’s Docker directory.
+### Data Storage
+* **Firestore:** Acts as the "Source of Truth" for system metadata, sensor configurations, and temporary storage for unconfigured sensor readings.
+* **TimescaleDB:** A PostgreSQL-based time-series database that stores all historical measurements in an EAV (Entity-Attribute-Value) or relational format, optimized for analytical queries.
 
-Incoming data is processed in the backend and normalized into the desired format. After processing, the data is stored in the TimescaleDB database, which is optimal for timestamped data. The stored information is accessed via an API called **Normalizer-API**, which defines the endpoints used by the frontend.
+### Backend & Frontend Communication
+* **Python API:** A FastAPI-based backend that handles administrative tasks such as adding, updating, and deleting sensor configurations in SQL and Firestore. It also manages the **Backfill** trigger logic.
+* **React Frontend:** The user interface hosted at **envidata.metropolia.fi**. It communicates with the Python API to manage sensors and fetch metadata.
+* **Dynamic Grafana Integration:** Instead of static charts, the frontend embeds **Grafana Dashboards** via iframes. These dashboards query TimescaleDB dynamically, automatically rendering graphs for whatever metrics are defined in the sensor's mapping.
 
-The frontend sends requests to the backend, enabling data communication between the backend and frontend.
+### Authentication & Security
+Access is restricted via a **Request Access** authentication layer. API communication is secured using Google Cloud Service Accounts and IAM roles, ensuring that only authorized services can write to the databases.
 
 
 # 6. System Requirements
 
 ### 6.1 Functional Requirements
 
-The system allows users to add sensors with coordinates, as well as search for, delete, and edit existing sensors. It provides comprehensive visualization of sensor data through dashboards, gauges, and graphs, enabling users to easily interpret and monitor sensor readings. Additionally, the system supports exporting data to CSV files, making it convenient to analyze the information further in tools such as Excel.
+* **Role-Based Access Control (RBAC):** * **Users:** Can view the sensor map, browse projects, and inspect dynamic data visualizations and statistics. 
+    * **Administrators:** Have exclusive access to management views to add, update, and delete sensors, as well as configure data mappings.
+* **Sensor Management (Admin only):** The system allows admins to search for, delete, and edit existing sensors or configure unknown devices.
+* **Dynamic Mapping (Admin only):** Admins can define how raw JSON keys from sensors are mapped to human-readable metrics.
+* **Automated Discovery:** The system automatically captures data from unconfigured sensors and displays them in a dedicated "Unknown Sensors" list for admins to onboard.
+* **Data Recovery (Admin only):** Supports a **Backfill** function to re-process historical data after a sensor's configuration is updated.
+* **Visualization (All Users):** Provides comprehensive visualization of sensor data through dynamically generated dashboards and graphs.
+* **Data Export (All Users):** Supports exporting sensor readings to CSV files for external analysis.
 
 ### 6.2 Non-Functional Requirements
 
-The system was implemented with a clear and user-friendly interface, ensuring that even new users can navigate it easily. Navigation is logical, and essential features can be found without difficulty. The map view and the sensor table beneath it refresh quickly, and sensor visualizations are presented clearly on dashboards without requiring technical expertise.
-
-The system was designed to be reliable by properly handling error situations and displaying clear error messages to the user. Data stored in TimescaleDB remains consistent and intact even in the event of errors.
-
-Security was ensured by requiring the backend to use a Google Cloud Run API key, and access to the system is restricted to VPN connections using Metropolia credentials. Invalid API calls are rejected to prevent misuse.
-
-Maintainability was achieved by keeping the frontend and backend as separate components, allowing them to be updated independently. Key parts of the codebase are documented.
-
-The system was implemented as a browser-based application so it can be used without local installations. The application is compatible with major browsers such as Chrome and Firefox, and functions consistently across different workstation environments.
-
-
-
-
+* **Usability:** The interface is designed to be intuitive. Administrative tools are hidden from standard users to simplify the experience. Clear visual feedback (green/red) is provided for all actions.
+* **Architecture:** The system uses a **Hybrid Cloud** approach. Real-time data ingestion and processing are handled by serverless Google Cloud services (Cloud Run), while the web application and API are hosted as Docker containers on Metropolia’s internal virtual servers.
+* **Reliability:** The ingestion pipeline uses **Pub/Sub** to ensure messages are queued and processed reliably. Data consistency is maintained across Firestore and TimescaleDB.
+* **Security:** Hosted at **envidata.metropolia.fi**. Access is restricted via a **Request Access** authentication model. Administrative functions are further protected by role-specific permissions.
+* **Maintainability:** The frontend and backend are containerized, ensuring consistent deployment.
 
 # 7. Flowchart
 
