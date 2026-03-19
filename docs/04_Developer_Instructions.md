@@ -59,3 +59,6 @@ For instructions on setting up the project locally, please refer to the Installa
 ### API Documentation:
 The project's API documentation is automatically generated using Swagger and is available at the `/docs` endpoint of the running Normalizer API instance. For example, if the Normalizer API is hosted at `https://normalizer-api-xxxxxxx.run.app`, the API documentation can be accessed at `https://normalizer-api-xxxxxxx.run.app/docs`.
 
+### Grafana:
+To modify or create new Grafana dashboards, access grafana at `http://localhost:3000` (or the appropriate URL if hosted elsewhere). Use the admin credentials defined in .env file to log in. Also make sure that GF_AUTH_DISABLE_LOGIN_FORM is not set to true in the docker compose file, otherwise you will not be able to log in to grafana.
+Once modified, export the dashboard JSON and update the corresponding files in the `grafana/dashboards` directory of the project. This will ensure that the new or modified dashboards are included in the deployment process and available in the production environment.
