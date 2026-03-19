@@ -15,11 +15,9 @@
 
 ## 1. Introduction
 
-This project implements a data ingestion pipeline and a frontend visualization system for IoT sensor data. The system ingests both historical and live sensor measurements from Google Cloud Firestore collections into a local TimescaleDB instance. Live data is received through a REST API, while historical data can be synchronized on demand.
+This project implements a hybrid cloud data ingestion pipeline and a frontend visualization system for IoT sensor data. The system ingests dynamic sensor measurements via a Google Cloud Run service, which processes and routes data to Firestore. The Backend API then synchronizes this data into a local TimescaleDB instance for Grafana visualization.
 
-The TimescaleDB database is configured as a data source in Grafana and is used to visualize common sensor metrics such as temperature, humidity, and air pressure. The frontend application embeds prebuilt Grafana dashboards to present these metrics to the user. Additional dashboards can be created directly in Grafana by defining new SQL queries on the sensor data. This allows developers and advanced users to explore new metrics without modifying the backend or frontend code.
-
-The system is designed to be extensible, allowing new sensors, metrics, and visualizations to be added with minimal changes to the existing architecture.
+The system utilizes Grafana as its primary visualization engine, embedding dynamic dashboards and Geomaps directly into a React-based frontend. The architecture is designed to be highly extensible, supporting any new sensor metrics through a dynamic EAV (Entity-Attribute-Value) database schema and user-defined mapping logic.
 
 ## 2. Project Documentation Overview
 
@@ -42,19 +40,16 @@ The system is designed to be extensible, allowing new sensors, metrics, and visu
 ## 3. Implemented Features / Out of Scope / Not Implemented
 
 ### ✅ Implemented:
-
-* Live sensor data ingestion via REST API
-* On-demand historical data synchronization from Firestore
-* Sensor metadata management via frontend UI
-* Visualization of sensor metrics using embedded Grafana dashboards
-* Visualization of sensor metadata using geo-mapping features in Grafana
+* **Dynamic Metric Mapping:** Administrators can define how raw sensor JSON keys map to human-readable metrics through the UI.
+* **Discovery Mode:** Automatic capture of "Unknown Sensors" into a dedicated discovery list for easy onboarding.
+* **Historical Data Backfill:** On-demand synchronization and re-processing of historical data from Firestore to TimescaleDB after sensor configuration.
+* **Secure Authentication:** Integrated **Auth0** framework with role-based access control (RBAC) and an "Authentication Guard" for protected routes.
+* **Advanced Visualization:** Dynamic Grafana Dashboards and Geomaps embedded via iframes with automatic refresh logic.
 
 ### 🚫 Out of Scope / Not Implemented:
-
-* User authentication and role-based access control for both frontend and Grafana
-* Alerting and notifications in Grafana
-* Historical data synchronization for nested firestore collections (example: `sensor_category/zone1/sensorA`)
-* Responsive frontend that is supported by differenct screen sizes
+* **Automated CI/CD:** Deployment currently requires manual submodule updates on the Metropolia VM (see Future Development).
+* **Sensor Config Profiles:** No predefined profiles for common sensor types(Ruuvitag, Teros.); all mapping configurations are manual.
+* **Real-time Alerts:** No alerting or notification system based on sensor thresholds or anomalies.
 
 ## 4. Instructions for Future Development
 
