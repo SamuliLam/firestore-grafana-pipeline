@@ -1,5 +1,13 @@
 # IoT Sensor Data Ingestion and Processing System
 
+## Table of Contents
+1. [In-Depth Data Ingestion Workflow](#1-in-depth-data-ingestion-workflow)
+2. [Database](#2-database)
+3. [Backend Workflow (Normalizer API)](#3-backend-workflow-normalizer-api)
+4. [Frontend Application](#4-frontend-application)
+5. [Grafana](#5-grafana)
+6. [Deployment and Docker](#6-deployment-and-docker)
+
 ## 1. In-Depth Data Ingestion Workflow
 
 This section describes the data ingestion workflow used by the system, from the point where sensor data is produced to the point where it is forwarded for normalization and further processing.

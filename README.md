@@ -138,7 +138,9 @@ You should see:
 
 ---
 
+
 ## VM Installation (Ubuntu 20.04+)
+**THE FOLLOWING GUIDE DOES NOT COVER DEPLOYMENT TO PRODUCTION ENVIRONMENT. IT IS MEANT FOR QUICK PROTOTYPING AND TESTING PURPOSES ONLY. REFER TO THE "envidata-deployment" repository(https://github.com/SamuliLam/envidata-deployment) for production-ready deployment instructions.**
 
 This guide deploys the system to a production Ubuntu VM with Nginx as reverse proxy.
 
@@ -294,7 +296,6 @@ Verify Grafana allows embedding:
 ```yaml
 # In docker-compose.yml grafana section:
 - GF_SECURITY_ALLOW_EMBEDDING=true
-- GF_AUTH_ANONYMOUS_ENABLED=true
 ```
 
 ### Nginx Redirect Loop
@@ -383,7 +384,6 @@ environment:
   - GF_SERVER_ROOT_URL=http://localhost:3000/grafana/
   - GF_SERVER_SERVE_FROM_SUB_PATH=true
   - GF_SECURITY_ALLOW_EMBEDDING=true
-  - GF_AUTH_ANONYMOUS_ENABLED=true
 ```
 
 **Nginx config:**
@@ -401,4 +401,4 @@ location /grafana/ {
 ## Documentation
 For detailed project documentation, refer to the [docs folder](https://github.com/SamuliLam/firestore-grafana-pipeline/tree/main/docs).
 
-*Last updated: December 2025*
+*Last updated: March 2026*
