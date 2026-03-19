@@ -6,71 +6,85 @@ This section describes the data ingestion workflow used by the system, from the 
 
 ### 1.1 Sensor Data Publishing
 
-IoT sensors produce measurement data such as temperature, humidity, and air pressure.
+IoT sensors (e.g., TEROS-12, RuuviTag, Generic MQTT nodes) produce various environmental metrics.
 
-- Sensors are grouped into predefined sensor categories, where each category represents a specific type of sensor.
-- Each sensor category publishes data to its own Google Cloud Pub/Sub topic. The published messages contain measurement data for individual sensors, encoded as JSON payloads.
+- Dynamic Metrics: The system ingests any key-value pairs provided in the payload.
+
+- Unified Ingress: All sensors publish their data to a single Google Cloud Pub/Sub topic.
+
+- Grouping: Sensors are grouped logically by project_id (defined during sensor configuration in the frontend) rather than hardware categories.
 
 ### 1.2 Pub/Sub Subscription and Event Triggering
 
-- Each Pub/Sub topic has a corresponding subscriber.
-- When new data is published to the topic, the subscriber triggers a cloud-based processing service.
-- This event acts as the entry point to the data ingestion workflow.
+- The unified Pub/Sub topic has a push subscription managed by Google Cloud Eventarc.
 
-### 1.3 Cloud Run Service per Sensor Category
+- When new data arrives, Eventarc triggers the central Cloud Run processing service.
 
-For each sensor category, a Google Cloud Run service processes the incoming Pub/Sub events.
+### 1.3 Unified Cloud Run Processing Service
 
-Each service executes the same type of trigger logic, but is configured using environment variables to handle:
+A single Google Cloud Run service handles all incoming traffic. This service is the "brain" of the ingestion pipeline.
 
-- a specific sensor category
-- the corresponding Firestore collection
+- It is environment-agnostic and relies on a Firestore lookup to determine how to handle each message based on the sensor's id.
 
-When an event is received, the Cloud Run service begins processing the payload.
+- It distinguishes between "Configured" sensors (routed to projects) and "Unknown" sensors (routed to a discovery collection).
 
-### 1.4 Message Parsing and Data Preparation
+### 1.4 Message Parsing and Transformation (Cloud Run Logic)
 
-The Cloud Run service that subscribes to the Pub/Sub topic performs the following steps for each incoming message:
+The Cloud Run service is the central processing unit that transforms raw, heterogeneous JSON data into a standardized format. When an event is received via Eventarc, the service executes the following sequence:
 
-1. Decode the Pub/Sub message payload (base64).
-2. Parse the JSON content into a structured object/dictionary.
-3. Extract the sensor identifier (`sensor_id`) and the measurement values (metrics).
-4. Attach minimal metadata required for downstream processing.
+1.  **Decoding and Extraction:**
+    * The Pub/Sub message payload is decoded from Base64.
+    * The JSON content is parsed, and the unique physical identifier (`sensor_id` or MAC address) is extracted.
 
-#### Enrichment rule
+2.  **Configuration Lookup:**
+    * The service performs a real-time lookup from the `sensor_metadata` (stored in Firestore).
+    * It retrieves the assigned `project_id` and the specific **Mapping Schema** defined for that sensor.
 
-The incoming raw data already contains the `sensor_id` field. The enrichment step adds only a `project_id` field that identifies what project the sensor is currently apart of (for example, `myyrmäki_katupuu`).
+3.  **Dynamic Mapping (Measurements vs. Extra):**
+    * **Measurements Object:** The service iterates through the raw JSON keys. If a key is found in the sensor's mapping configuration (e.g., raw key `t` maps to `temperature`), it is placed into the `measurements` object with its new standardized name.
+    * **Extra Object:** To ensure total data transparency and prevent data loss, any raw fields that are **not** defined in the mapping schema are automatically moved to an `extra` object. This allows researchers to see diagnostic data (like RSSI, battery voltage, or internal counters) even if they aren't explicitly tracked as primary metrics.
 
-The enriched object (raw data + `project_id`) is used for forwarding to the Normalizer API. This enriched object is not written to Firestore.
+4.  **Timestamp Normalization:**
+    * The service looks for a timestamp in the payload. If missing, it uses the current arrival time.
+    * All timestamps are converted to a standardized ISO 8601 UTC format to ensure consistency across different time zones and sensor types.
 
-**Example of the typical data structure after parsing and enrichment:**
+**Example of the transformed data structure:**
 
 ```json
 {
-  "sensor_id": "ABC123",
-  "temperature": 21.4,
-  "humidity": 55.1,
-  "timestamp": "2024-06-15T12:34:56Z",
-  "project_id": "viherpysakki"
+  "sensor_id": "AA:BB:CC:DD:EE:FF",
+  "timestamp": "2026-03-19T08:00:00.000Z",
+  "project_id": "greenhouse_alpha",
+  "measurements": {
+    "temperature": 22.5,
+    "humidity": 48.2,
+    "soil_moisture": 0.35
+  },
+  "extra": {
+    "rssi": -68,
+    "battery": 3600
+  }
 }
 ```
 
 ### 1.5 Writing Data to Firestore
 
-After parsing (and independently of forwarding to the Normalizer API), the service writes the original parsed data into Firestore:
+The Cloud Run service routes the transformed data to the following Firestore paths:
 
-- Each sensor category uses its own Firestore collection (collection name corresponds to `project_id`).
-- Documents are created using a deterministic document id that includes the sensor identifier and a timestamp (e.g., `{sensor_id}_{YYYY-MM-DD-HH:MM:SS}`).
-- Firestore acts as a storage layer for raw and near-real-time sensor events prior to final normalization and long-term analytical storage.
+- Configured Sensors: Data is written to the project's specific collection: `projects/{project_id}/sensors/{sensor_id}/readings/{doc_id}`
 
-**Important:** The document written to Firestore contains the parsed raw sensor data (including `sensor_id`) but does not include the `project_id` enrichment that is forwarded to the Normalizer API. Forwarding and Firestore writes are separate actions performed by the Cloud Run service.
+- Unconfigured Sensors: If the sensor is unrecognized, data is stored for discovery: `unconfigured_sensors/{sensor_id}/readings/{doc_id}`
+
+- Deterministic ID: The `doc_id` is generated as a timestamp string (e.g., `2026-03-17-12:34:56`) to prevent duplicate entries for the same second.
 
 ### 1.6 Forwarding Data to the Normalization API
 
+**NOT SUPPORTED IN CURRENT VERSION**
 In addition to being stored in Firestore, the Cloud Run service forwards the enriched sensor data to the system's Normalizer REST API. The API endpoint is provided to the Cloud Run service through environment variables. The forwarded payload contains the original parsed measurement values together with the added `project_id` metadata, which identifies the sensor category.
 
 #### 1.6.1 Current Forwarding Scope
 
+**NOT SUPPORTED IN CURRENT VERSION**
 At the time of writing, forwarding sensor data to the Normalizer REST API is implemented only for the environmental module sensor category (`ymparistomoduuli`). For that Cloud Run deployment, the service is configured with the following environment variable:
 
 ```
@@ -81,6 +95,7 @@ When `NORMALIZER_API_URL` is set, the Cloud Run service will POST the enriched d
 
 ### 1.7 Data Reception in the Normalizer API
 
+**NOT SUPPORTED IN CURRENT VERSION**
 When sensor data is forwarded from a Cloud Run service, it is received by the Normalizer REST API via the `/webhook` endpoint.
 
 The API is responsible for validating, normalizing, and transforming incoming sensor data into a consistent internal format before it is persisted to the database. The incoming payload is expected to include both the raw sensor measurements and the `project_id` field, which identifies the sensor category from which the data originates.
@@ -89,11 +104,11 @@ The API is responsible for validating, normalizing, and transforming incoming se
 
 Once the data is received, it is processed by the `SensorDataParser` component. The core normalization logic is implemented in the `process_raw_sensor_data` method.
 
-This method iterates through the incoming payload and applies the following high-level steps:
+This method iterates through the incoming payload and applies the following steps:
 
 1. extracts and cleans the sensor identifier
-2. resolves the timestamp (either from the payload or a generated default)
-3. identifies metric fields dynamically
+2. identifies metrics dynamically from the `measurements` object (or directly from the payload if measurements object is not used)
+3. resolves the timestamp (either from the payload or a generated default)
 4. converts the input into an Entity–Attribute–Value (EAV) representation
 
 The output of the normalization process is a list of dictionaries, each representing a single sensor metric observation in a normalized format. Each entry follows the structure:
@@ -107,8 +122,6 @@ The output of the normalization process is a list of dictionaries, each represen
    "project_id": project_id,
 }
 ```
-
-This EAV-based structure ensures flexibility in handling heterogeneous sensor data while maintaining a consistent database schema.
 
 ### 1.9 Data Persistence and Visualization
 
@@ -133,34 +146,31 @@ The Database models are defined in `db.py` and mirror the SQL schema:
 - **SensorData Class:** Maps to the `sensor_data` table. It defines the structure for timestamped sensor data.
 - **SensorMetadata Class:** Maps to the `sensor_metadata` table. It defines the static metadata of the sensors.
 
-### 2.2 TimescaleDB
+### 2.2 TimescaleDB & Hypertables
 
-TimescaleDB was chosen for its features that can reliably handle sizable amounts of time series data while maintaining an SQL standard relational database. The core feature utilized is Hypertable, which automatically partitions data by time across storage, ensuring that queries remain fast even when datasets grow.
+TimescaleDB partitions data into Hypertables based on time. This architecture ensures that query performance remains consistent even as the database grows to millions of entries.
 
 ### 2.3 Entity-Attribute-Value (EAV) Schema
 
-Due to being unable to predict future sensor data formats, a highly adaptable schema for the database was required. Instead of creating individual tables for each sensor data response, the project team chose to implement an Entity-Attribute-Value (EAV) schema pattern in the `sensor_data` table.
-
-Instead of storing a single row with multiple columns for "temperature", "humidity", "pressure" and whatever metric future sensors may support, the project stores one row per metric measurement of a sensor.
+To support a limitless variety of environmental sensors, the `sensor_data` table uses the EAV pattern:
 
 **The `sensor_data` table structure is as follows:**
 
-| timestamp           | sensor_id     | metric_name | metric_value | project_id      |
-| ------------------- | ------------- | ----------- | ------------ | ---------------- |
-| 2023-10-27 10:00:00 | env-sensor-01 | temperature | 22.5         | ymparistomoduuli |
-| 2023-10-27 10:00:00 | env-sensor-01 | humidity    | 60           | ymparistomoduuli |
+| timestamp           | sensor_id     | metric_name | metric_value | project_id       |
+| ------------------- | ------------- | ----------- | ------------ |------------------|
+| 2023-10-27 10:00:00 | env-sensor-01 | temperature | 22.5         | project_a        |
+| 2023-10-27 10:00:00 | env-sensor-01 | humidity    | 60           | project_a |
 
-This structure allows the project to ingest data from entirely new sensor types without requiring any database schema changes.
 
 ### 2.4 Sensor Metadata
 
-To avoid data redundancy, static information about sensors is separated from the high-volume measurement data. The `sensor_metadata` table acts as a relational lookup table containing:
+The `sensor_metadata` table holds static information about each sensor. It is used for visualizing sensor locations on maps in Grafana and displaying each sensor in a table in the frontend.
 
 - **sensor_id:** Primary key of sensor Metadata table
+- **description:** Description of the sensor
 - **latitude / longitude:** Coordinates for Grafana visualization
-- **project_id:** category of sensor
+- **project_id:** project the sensor belongs to
 
-The separation of sensor measurement data and sensor metadata ensures that the high-volume time-series table remains devoid of redundancy while metadata is only joined for Grafana-based features and visualizations.
 
 ### 2.5 Data Integrity
 
@@ -172,419 +182,154 @@ What the composite key essentially prevents is a situation where a specific sens
 
 ### 2.6 Integration with Grafana
 
-The database is exposed to Grafana. This ensures that dashboards can directly be created by accessing the data in the database in real time. This will ensure a smooth and intuitive experience for creating and maintaining Grafana visualizations.
+The database is exposed to Grafana. This ensures that dashboards can directly be created by accessing the data in the database in real time.
 
 ## 3. Backend Workflow (Normalizer API)
 
-The Normalizer API handles receiving raw sensor data, validating, normalizing it into a unified schema, and storing it in TimescaleDB. It supports real-time ingestion, historical data loading from Firestore, and sensor metadata management (e.g., location, category). This component standardizes heterogeneous sensor formats into consistent time-series data for analytics and Grafana dashboards.
+The Backend API, acts as the administrative hub. While real-time ingestion is handled by Cloud Run, the Backend manages metadata, sensor configurations, and the historical synchronization (Backfill) from Firestore to TimescaleDB.
 
-### Components:
+### 3.1 Components
+1. **Normalizer API:** Endpoints for sensor registration, metadata updates, sensor configurations and triggering historical loads.
+2. **SensorDataParser:** Core logic for converting Firestore documents (with `measurements` and `extra` objects) into normalized EAV rows.
+3. **Backfill Engine:** A script that synchronizes data from Firestore to TimescaleDB for both new and updated sensors.
 
-1. REST API for data ingestion, historical data loading, and metadata management
-2. SensorDataParser for raw data processing and normalization
-3. Historical data loader from Firestore
-4. Database layer for persisting normalized data
+---
 
-### 3.1 Ingestion Endpoint
+### 3.2 Ingestion & Webhook Support
+> **NOT SUPPORTED IN CURRENT VERSION**
+> The `POST /webhook` endpoint is available for legacy testing but is not used in the production pipeline. Inbound data is processed exclusively via the Cloud Run Ingestion service.
 
-All incoming sensor measurements are sent to the Normalizer API through its public endpoint:
+---
 
-```
-POST /webhook
-```
+### 3.3 SensorDataParser — Transformation Pipeline
 
-The request body must contain:
+The `SensorDataParser` class is used by the Backend to normalize data fetched from Firestore. It ensures that heterogeneous payloads are converted into a consistent format for TimescaleDB.
 
-- a valid `sensor_id`
-- measurement fields (e.g., temperature, humidity, pressure, etc.)
-- a `project_id` field provided by the Cloud Run service
+**Sequence of Operations:**
+1. **Identifier Extraction:** Detects the `sensor_id` from supported fields (`id`, `deviceId`, `mac`, etc.).
+2. **Dynamic Metric Extraction:** - It primarily looks for the `measurements` object created by Cloud Run.
+   - Every key-value pair in the `measurements` object is converted into a separate row.
+   - Diagnostic data from the `extra` object can also be extracted if configured.
+3**UTC Normalization:** All timestamps are parsed (ISO 8601 or Firestore Nanoseconds) and converted strictly to UTC.
 
-The API does not assume a strict schema. Instead, it processes any number of unknown metric fields dynamically.
-
-### 3.2 SensorDataParser — Raw Data Processing Pipeline
-
-The core logic for handling incoming data is implemented in the `SensorDataParser` class. It executes the following sequence:
-
-1. Sensor identifier extraction
-2. Timestamp handling and normalization
-3. Metric extraction
-4. List-based metric expansion (if applicable)
-5. Conversion to normalized EAV (Entity–Attribute–Value) rows
-
-The end result of the parsing stage is a list of dictionaries:
-
+**Output Format (EAV):**
 ```python
 {
-    "timestamp": "... (UTC)",
-    "sensor_id": "...",
-    "metric_name": "...",
-    "metric_value": "...",
-    "project_id": "..."
+    "timestamp": "2026-03-19T08:00:00Z",
+    "sensor_id": "AA:BB:CC...",
+    "metric_name": "soil_temperature",
+    "metric_value": 22.5,
+    "project_id": "greenhouse_alpha"
 }
 ```
 
-These rows are then handed off to the database layer.
+# 4. Frontend Application
 
-### 3.3 Sensor Identifier Handling
+The frontend is a React-based single-page application (SPA) hosted at `envidata.metropolia.fi`. It serves as the primary interface for environmental data monitoring and administrative sensor management.
 
-Incoming data may contain the sensor identifier in various possible field names.
+## 4.1 Technology Stack
 
-**Supported field names:**
+- **Framework:** React with TypeScript.
+- **Routing:** React Router DOM for structured navigation and layout management.
+- **Authentication:** **Auth0 Framework** for secure user identity management and role-based access.
+- **State & Data Fetching:** - **TanStack Query (React Query):** Used for managed server-state, such as fetching sensor metadata.
+    - **Native Fetch API:** Used in legacy and specific administrative components for direct POST/PUT requests to the Backend API.
+- **UI Components:** Shadcn UI (Radix UI + Tailwind CSS) for a professional and consistent look.
 
-- `sensor_id`
-- `id`
-- `sensorId`
-- `device_id`
-- `deviceId`
-- `sensorID`
-- `SensorID`
+## 4.2 Application Architecture
 
-At least one of these must be present. If no valid identifier is detected, the payload is rejected.
+### 4.2.1 Core Routing & Guards
+The application uses a centralized routing structure in `App.tsx`. 
+- **Authentication Guard:** A custom `AuthenticationGuard` component protects all primary routes (Home, Sensors, SensorData).
+- **Access Management:** Users who are authenticated but lack specific permissions are directed to the `AccessRequested` view.
+- **Shared Layout:** A `SharedLayout` component ensures consistent navigation and branding across different views.
 
-This approach ensures compatibility with different sensor vendors and formats.
+### 4.2.2 Context Providers
+- **SearchProvider:** Manages global search state via `SearchContext`, allowing real-time filtering of sensors across the map and table views.
+- **QueryClientProvider:** Orchestrates the TanStack Query lifecycle and caching.
 
-### 3.4 Metric Extraction Rules
+## 4.3 Key Components & Features
 
-All fields that are not identified as sensor identifier fields or timestamp fields are interpreted as metrics. This rule allows the backend to flexibly ingest heterogeneous sensor payloads without requiring predefined schemas.
+### 4.3.1 Dynamic Grafana Integration (Maps & Graphs)
+The application relies heavily on **Grafana Iframe Integration** instead of local mapping libraries:
+- **Geomap View:** The main environmental map is an embedded Grafana **Geomap** panel. This ensures that the map markers, layers, and status indicators are always synchronized with the latest data in TimescaleDB.
+- **Dynamic Dashboards:** Sensor-specific views (`SensorData`) render dashboards dynamically. The `refreshKey` pattern is used to force-refresh these iframes when administrative changes (like mapping updates) are performed.
 
-**Processing rules:**
+### 4.3.2 Administrative Tools (RBAC)
+Management panels (Add/Update/Remove Sensor) are integrated into the main dashboard but are functionally restricted.
+- **Admin Actions:** These components communicate with the Backend API using asynchronous functions. While the project transition towards TanStack Query is ongoing, many administrative actions still utilize the native **Fetch API** for direct interaction with the Python backend.
+- **Unknown Sensors Discovery:** Admins can view a list of sensors currently in the "unconfigured" state and promote them to active projects through the UI.
 
-- The field name becomes `metric_name`.
-- The corresponding value becomes `metric_value`.
-- Arbitrary and previously unknown metric fields are accepted without any code changes.
-- Complex values (such as lists) are handled by specialized logic described later.
-
-This design ensures that the backend can automatically adapt to new sensor types or payload structures.
-
-However, this also means that certain metadata-like fields will intentionally be treated as metrics. For example, a payload such as:
-
-```
-SensorReadingTime: "2025-05-31T04:59:26"   (string)
-finalvalue: "-26.3"                        (string)
-name: "Arkkupakastin (Toimisto)"           (string)
-sensorID: "125052"                        (string)
-unit: "°C"
-```
-
-will produce the following behavior:
-
-- `sensorID` → recognized as a valid sensor identifier (and therefore excluded from metric extraction)
-- `SensorReadingTime` → recognized as a timestamp field (and excluded)
-- `finalvalue`, `name`, and `unit` → treated as metrics intentionally
-
-This is expected behavior and part of the backend's schema-flexible ingestion model.
-
-### 3.5 Handling List-Based Metric Values
-
-Some sensors publish arrays of values in a single message (batch upload).
-
-**Rules:**
-
-- The latest value in the list receives the Firestore ingestion timestamp.
-- Earlier values receive timestamps spaced backwards.
-- Spacing is defined by the constant `LIST_VALUE_INTERVAL_MINUTES` (default = 5 min).
-
-**Example:** if a sensor reports 5 measurements, timestamps will be:
-
-```
-t, t-5min, t-10min, t-15min, t-20min
-```
-
-This preserves chronological order without requiring the sensor to embed timestamps.
-
-### 3.6 Timestamp Handling and Normalization (Always Stored as UTC)
-
-The system supports multiple timestamp field names, such as:
-
-- `timestamp`
-- `time`
-- `date`
-- `datetime`
-- `SensorReadingTime`
-
-If no valid timestamp is provided, the ingestion time is used.
-
-**Normalization rule:**
-
-All timestamps stored in TimescaleDB are converted to UTC.
-
-This ensures:
-
-- consistency across all sensor categories
-- compatibility with Grafana
-- correct aggregation and comparison across time zones
-
-**Implementation Summary:**
-
-The parser applies these steps:
-
-1. If the timestamp is missing → use current time (UTC).
-2. If the timestamp is a Firestore `DatetimeWithNanoseconds`, convert it to UTC.
-3. If the timestamp is a string:
-   - parse as ISO 8601
-   - assume Europe/Helsinki if no timezone is provided
-   - convert to UTC
-
-This guarantees that all rows inserted into the time-series database use a uniform timezone.
-
-### 3.7 Database Persistence Layer
-
-After parsing and normalization, the API uses the method:
-
-```python
-insert_sensor_rows(...)
-```
-
-to persist normalized EAV rows into the `SensorData` table inside TimescaleDB.
-
-### 3.8 Historical Sensor Data Loading
-
-In addition to real-time data ingestion, the system supports loading historical sensor data from Firestore into the TimescaleDB database. This functionality is implemented in the `history_to_timescale.py` script.
-
-The script iterates over configured Firestore collections corresponding to sensor categories and fetches older documents to be parsed and inserted into the time-series database.
-
-**Important considerations:**
-
-- The script expects sensor data documents to contain a `timestamp` field that indicates the measurement time.
-- If the `timestamp` field is missing or named differently than `timestamp`, the historical data loading may not function correctly, as the query filters and timestamp extraction rely on this standard field name.
-- Missing or incorrectly named timestamp fields can lead to incomplete or failed ingestion of historical data.
-
-This implies that for seamless historical data loading, sensor data stored in Firestore should consistently include a valid `timestamp` field following the expected naming convention.
-
-### 3.9 Sensor Metadata Management
-
-The backend also provides endpoints to manage sensor metadata stored in the `sensor_metadata` table. This table holds static information about each sensor, such as sensor identifier, geographic coordinates (latitude and longitude), and sensor category.
-
-Sensor metadata is used primarily for geographic visualization of sensors on maps within the frontend application.
-
-# 4. Frontend
-
-This part of the document describes how the frontend interacts with the backend, what technologies the frontend uses, and information about the components the frontend uses. The frontend is responsible for receiving and sending requests to the backend depending on what the user wants to do.
-The frontend is built using **React** and **TypeScript**. The project uses **Vite** as the build tool.
-
----
-
-## 4.1 UI components
-
-A lot of the components that are used are from the **Shadcn UI component library**. We used a component library because we wanted to make the UI consistent and use the same kind of styling for components. The used UI components are imported in the **`src/components/ui`** folder.
-
----
-
-## 4.2 Components
-
-Our own created components are in the **`src/components`** folder. All of these components are used in the homepage. Only the **Dashboard** component is used on the other pages since the other pages only display dashboards from Grafana.
-
-### Component List:
-
-- `AddSensor`
-- `Dashboard`
-- `HoverSlideAnimation`
-- `LoadHistory`
-- `RemoveSensor`
-
-The biggest components are `AddSensor`, `LoadHistory`, and `RemoveSensor`. `Dashboard` and `HoverSlideAnimation` are both under 20 lines of code. The `Dashboard` component is used to show data from Grafana.
-
-The **Homepage** is the main page of the website, but it also has **Individual sensor view** and **Multiple sensor view**. These sensor view pages don’t really use any functions or logic inside React, so the main talking point will be the home page.
-
-Our components use a **`refreshKey`** attribute so the components can be individually refreshed and not the entire webpage. More on that later.
-
-### 4.2.1 Component Structure
-
-This section will detail the structure that is used for the three big components (`AddSensor`, `LoadHistory`, and `DeleteSensor`).
-
-In this example, `AddSensor` is used, but the main structure is the same with the other components.
-
-1.  **Imports:** The components import everything needed at the start, including the Shadcn components.
-2.  **Function Definition:** Next, there is `export function` followed by the function name.
-3.  **State Management:** Inside the function, there is a lot of **`useState`**, which is a React hook that is very useful for managing different states for the component. `useState` hooks are also phenomenal for checking if the submitted form is valid and generally setting errors.
-4.  **Backend Communication:** Then there is an **asynchronous function** that is used to communicate with the backend. Inside the asynchronous function, errors and error messages are set depending on the user input. For communicating with the backend, **`fetch`** requests that send or receive the JSON payloads are used.
-
-#### Example Request Structure:
-
-A typical request starts with **`await`**, which makes the function wait until a promise is resolved or rejected. The endpoint is set as the same as in the backend. `API_BASE_URL` is located inside an `.env` file.
-
-```javascript
-await fetch(`${API_BASE_URL}/api/sensors`, {
-  method: "POST", // Example method
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify(data),
-});
-```
-
-In this request, we use **POST** because we want to add a sensor to the map. In the header/body, it tells what kind of content we want to send to the backend.
-
-### Success/Failure Handling:
-
-We wait for the result of the request, and depending on if the request has failed or succeeded, different things are done.
-
-- If it somehow **failed**, we set the appropriate error messages and inform the user.
-- If it **succeeds**, we refresh the form and tell the user it succeeded.
-
-There are also some `console.log` statements that help to debug things in the code, like here where it tells if a sensor was successfully added.
-
-### Component Rendering:
-
-After the backend request, there is the actual component that gets rendered on the webpage.
-
-```javascript
-    <div className="add-sensor-panel p-4 border rounded-lg shadow-sm bg-white dark:bg-gray-800">
-        <FieldLegend className="text-lg font-semibold mb-4">Add New Sensor</FieldLegend>
-
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <div className="flex flex-col">
-                <FieldLabel htmlFor="sensor_id" className="mb-1 font-medium">Sensor ID</FieldLabel>
-                <Input type="text"
-                       id="sensor_id"
-                       name="sensorId"
-                       value={sensorId}
-                       onChange={(e) => setSensorId(e.target.value)}
-                       className="border rounded px-3 py-2"
-                       placeholder="Enter Sensor ID"/>
-            </div>
-            {errors.sensorId && <p className="text-red-500 text-sm">{errors.sensorId}</p>}
-```
-
-This is where the form starts, and you can see some of the Shadcn components like **`Input`**, **`FieldLegend`**, and **`FieldLabel`**. There is also the **`handleSubmit`** function which is called when submitting the form using a button.
-
-The **`onChange`** attribute sets the `sensorId` using `useState`. This same structure is used for all of the input fields. If there is some kind of error, it is displayed under the input field.
-
-At the end of the form, there is a button. Pressing the button triggers different things depending on the `useStates`. If everything went well, the `sensorAdded` `useState` should be **true** and it displays a **green message**, and if `sensorAddFailed` is true, it displays **red text** with other errors that were encountered.
-
----
-
-## 4.3 Refresh key
-
-The **`refreshKey`** is a key feature that makes the website more seamless to use. The `refreshKey` is used to refresh the dashboard when making changes to the sensors by adding or removing them. Inside the Dashboard component we give it the following attributes:
-
-```javascript
-export const Dashboard = ({
-  dsb_link,
-  styles,
-  refreshKey = 0,
-}: DashboardProps) => {
-  const defaultClasses = "grow rounded-md shadow-light-shadow-sm";
-
-  return (
-    <iframe
-      key={String(refreshKey)}
-      title="Dashboard"
-      src={dsb_link}
-      className={`${defaultClasses} ${styles}`}
-    ></iframe>
-  );
-};
-```
-
-Here you can see the key attribute given the refreshkey. Changing the component’s key forces React to unmount and remount the element. So when the key changes the old iframe is discarded and the fresh one is created in its place.
-
-In the homepage we have a function that adds +1 to the previous refreshkey, making the value change thus refreshing the dashboard. Below are the main parts that make the refresh key work on the homepage.
-
-1. Function that changes the value of refreshkey
-
-```javascript
-const refreshEverything = () => {
-  setDashboardRefreshKey((prev) => prev + 1);
-
-  queryClient.invalidateQueries({
-    queryKey: ["sensor_metadata"],
-  });
-};
-```
-
-2. Actions that trigger the refreshkey to change.
-
-```javascript
-    <AddSensor refreshKey={dashboardRefreshKey} onSensorAdded={refreshEverything}/>
-    <RemoveSensor refreshKey={dashboardRefreshKey} onSensorRemoved={refreshEverything}/>
-```
-
-3. Refreshkey changing when refreshEverything called.
-
-```javascript
-<Dashboard
-  styles="w-full"
-  dsb_link={map_dsb}
-  refreshKey={dashboardRefreshKey}
-/>
-```
-
-### 4.4 Search function
-
-Homepage also includes a search function to find sensors in the dashboard. Inside the project is React context that stores searchValue that has the current text the user typed and a function that updates it using useState. In our home page there is a useSearch() hook that gives the real-time value of the search text.
-
-```javascript
-const { searchValue } = useSearch();
-```
-
-The search actually becomes functional when the DataTable function gets the search value
-
-```javascript
-<DataTable
-  columns={columns}
-  data={data ?? []}
-  searchFilter={searchValue}
-  onRowClick={handleRowClick}
-/>
-```
-
-The DataTable receives the sensor data and the current search value. Every time the searchValue changes the DataTable re-renders, filtering out the values we want and what we don’t want. The DataTable is a component that is made to filter out values based on sensorId. So typing a sensorId you want to search for will pop in the list of values under the map.
+### 4.3.3 Real-time Search and Synchronization
+The `DataTable` responds to the `searchValue` from the global `SearchProvider`. This allows users to quickly find specific sensors by ID or project id.
 
 ## 5. Grafana
 
-Grafana was chosen to display our sensor data because it’s simple to set up and easy to work with. It lets us build clear dashboards quickly and supports real-time updates from our data sources. The variety of charts and visual tools makes it straightforward to show the sensor values in a way that’s easy to understand. Since Grafana is widely used and well-documented, it will also be easy to maintain and expand later.
+Provisioning was implemented by keeping YAML configuration files “datasource.yaml” and “dashboards.yaml” in the datasources and dashboards directories. These files define the required data sources and dashboards for the environment. The docker-compose.yaml file mounts these directories into the Grafana container at startup. When the stack is started with Docker Compose, Grafana reads the provisioning files, configures the TimescaleDB data source, user credentials and loads the predefined dashboards.
 
-We implemented provisioning by keeping YAML configuration files “datasource.yaml” and “dashboards.yaml” in the datasources and dashboards directories. These files define the required data sources and dashboards for the environment. The docker-compose.yaml file mounts these directories into the Grafana container at startup. When the stack is started with Docker Compose, Grafana reads the provisioning files, configures the TimescaleDB data source, user credentials and loads the predefined dashboards.This ensures that the Grafana environment is set up the same way for all team members, with version-controlled configuration and no manual UI setup needed.
+At the time of writing, the following dashboards are in use on the frontend:
+- Overview.json: Dynamic dashboard that shows all measurements based on different variables such as project_id and selected sensors.
+- Sensor.json: Sensor-specific dashboard that shows all measurements for a specific sensor. The dashboard is rendered dynamically based on the sensor_id passed as a variable in the URL.
 
-![Dashboard](dash1.png)
-![Dashboard](dash2.png)
+# 6. Deployment and Docker
 
-## 6. Docker
+This section describes the containerization strategy and the distinct workflows for local development versus production deployment.
 
-### 6.1 Overview
+## 6.1 Development Workflow
 
-Docker is used to containerize key backend components and Grafana to provide consistent, isolated, and portable deployment environments. The frontend application is **not** containerized and is deployed separately.
+In the local development environment, the system uses a hybrid approach to allow for rapid iteration and live reloading.
 
-### 6.2 Containerized Services
+- **Backend & Infrastructure:** Containerized using Docker to provide a consistent environment for the database and core services.
+- **Frontend:** Not containerized during development. It is run directly on the host machine using `npm run dev` from the frontend project root. This ensures the fastest possible Hot Module Replacement (HMR) and debugging experience.
 
-The main services containerized with Docker are:
+## 6.2 Containerized Services (Development)
 
-- **TimescaleDB**  
-  Runs the time-series database using the official TimescaleDB image (PostgreSQL 17-based). It uses persistent volumes for data durability and initializes the database with a custom SQL script. Health checks ensure the database is ready before dependent services start.
+The local `docker-compose.yaml` orchestrates the following services:
 
-- **Normalizer API**  
-  The backend normalization service built from the project source using a Dockerfile. Runs on Uvicorn, exposing port 8080. Configured via environment variables for database connection, Google Cloud credentials, and Firestore collections. The source code is volume-mounted for live reload during development. Depends on TimescaleDB availability.
+* **TimescaleDB:** A PostgreSQL 17-based time-series database. It uses persistent volumes for data durability and is initialized with custom SQL scripts.
+* **Backend API (Normalizer/Management):** Built from the backend source code. The source code is volume-mounted into the container to enable live reloading (Uvicorn) as changes are made.
+* **Grafana:** The visualization suite, pre-configured with admin credentials and provisioned dashboards/datasources. It depends on TimescaleDB being healthy before starting.
 
-- **Grafana**  
-  Visualization service running from the official Grafana image. It exposes port 3000 and is configured with admin credentials and pre-provisioned dashboards. Persistent volumes store Grafana data and configurations. Depends on TimescaleDB being healthy.
+## 6.3 Production Deployment (`envidata-deployment`)
 
-### 6.3 Docker Compose Orchestration
+For production environments at **envidata.metropolia.fi**, the project uses a centralized deployment repository: **`envidata-deployment`**.
 
-The services are orchestrated using Docker Compose, which manages service dependencies, networking, and volume mounting. This setup ensures services start in the correct order, for example, the Normalizer API and Grafana wait until TimescaleDB is healthy before launching.
+- **Structure:** Both the frontend and backend repositories are linked as **Git Submodules** within this deployment repo.
+- **Unified Orchestration:** In the production repository, the `docker-compose.yaml` containerizes **both** the frontend and the backend for a single cohesive deployment.
 
-### 6.4 Running the Stack
+## 6.4 Environment Configuration (.env)
 
-Common Docker Compose commands for managing the environment:
+The system requires specific environment variables to function. These must be defined in a `.env` file at the root of the respective service or the deployment repository.
 
+### 6.4.1 Authentication (Auth0)
+These variables enable secure login and role-based access control via Auth0:
+(*Some are named with the `VITE_` prefix because the same variables are used in the frontend application, which requires the prefix for environment variable exposure.*)
+- `VITE_AUTH0_DOMAIN`: The Auth0 tenant domain (e.g., `dev-xxxx.auth0.com`).
+- `VITE_AUTH0_AUDIENCE`: The API identifier for backend authorization.
+
+### 6.4.2 Database (TimescaleDB)
+Used by the Backend API and Grafana to connect to the time-series storage:
+- `POSTGRES_USER`: The administrative username for the database.
+- `POSTGRES_PASSWORD`: The password for the database user.
+- `POSTGRES_DB`: The name of the database (default: `sensor_data`). (Keep this unchanged to avoid connection issues with Grafana provisioning.)
+- `POSTGRES_URL`: Full connection string (e.g., `postgresql://user:pass@db:5432/sensor_data`).
+
+### 6.4.3 Cloud Integration (Google Cloud)
+Required for the Backend API to interact with Firestore:
+- `GCP_PROJECT_ID`: The ID of the Google Cloud project.
+
+### 6.4.4 Grafana Configuration
+- `GRAFANA_ADMIN_USER`: Username for the Grafana administrative interface.
+- `GRAFANA_ADMIN_PASSWORD`: Credentials for the Grafana administrative interface.
+
+## 6.5 Running the Stack
+
+### Local Development
 ```bash
-docker-compose up       # Start all services
-docker-compose down     # Stop all services (volumes remain)
-```
+# Start backend infrastructure
+docker-compose up -d
 
-### 6.5 Environment Configuration
-
-Environment variables are used to configure sensitive information and service parameters such as:
-
-- Database credentials and connection URLs
-- Google Cloud service account credentials
-- Firestore collection names
-- Grafana admin user credentials
-
-These are provided via a `.env` file.
-
-### 6.6 Notes and Development Workflow
-
-- The backend service source code is mounted as a volume in the container to enable live reloading during development.
-- Persistent Docker volumes ensure that database and Grafana data survive container restarts and updates.
-- The frontend application is deployed separately and is not part of the Docker container ecosystem.
+# In a separate terminal, start the frontend
+cd frontend
+npm install
+npm run dev
