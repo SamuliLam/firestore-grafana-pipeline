@@ -87,26 +87,26 @@ The Cloud Run service routes the transformed data to the following Firestore pat
 
 ### 1.6 Forwarding Data to the Normalization API
 
-**NOT SUPPORTED IN CURRENT VERSION**
-In addition to being stored in Firestore, the Cloud Run service forwards the enriched sensor data to the system's Normalizer REST API. The API endpoint is provided to the Cloud Run service through environment variables. The forwarded payload contains the original parsed measurement values together with the added `project_id` metadata, which identifies the sensor category.
+> **NOT SUPPORTED IN CURRENT VERSION**
+> In addition to being stored in Firestore, the Cloud Run service forwards the enriched sensor data to the system's Normalizer REST API. The API endpoint is provided to the Cloud Run service through environment variables. The forwarded payload contains the original parsed measurement values together with the added `project_id` metadata, which identifies the sensor category.
 
 #### 1.6.1 Current Forwarding Scope
 
-**NOT SUPPORTED IN CURRENT VERSION**
+> **NOT SUPPORTED IN CURRENT VERSION**
 At the time of writing, forwarding sensor data to the Normalizer REST API is implemented only for the environmental module sensor category (`ymparistomoduuli`). For that Cloud Run deployment, the service is configured with the following environment variable:
 
 ```
 NORMALIZER_API_URL=<url to the Normalizer API webhook endpoint>
 ```
 
-When `NORMALIZER_API_URL` is set, the Cloud Run service will POST the enriched data object (original parsed fields + `project_id`) to the Normalizer API endpoint.
+> When `NORMALIZER_API_URL` is set, the Cloud Run service will POST the enriched data object (original parsed fields + `project_id`) to the Normalizer API endpoint.
 
 ### 1.7 Data Reception in the Normalizer API
 
-**NOT SUPPORTED IN CURRENT VERSION**
-When sensor data is forwarded from a Cloud Run service, it is received by the Normalizer REST API via the `/webhook` endpoint.
+> **NOT SUPPORTED IN CURRENT VERSION**
+> When sensor data is forwarded from a Cloud Run service, it is received by the Normalizer REST API via the `/webhook` endpoint.
 
-The API is responsible for validating, normalizing, and transforming incoming sensor data into a consistent internal format before it is persisted to the database. The incoming payload is expected to include both the raw sensor measurements and the `project_id` field, which identifies the sensor category from which the data originates.
+>The API is responsible for validating, normalizing, and transforming incoming sensor data into a consistent internal format before it is persisted to the database. The incoming payload is expected to include both the raw sensor measurements and the `project_id` field, which identifies the sensor category from which the data originates.
 
 ### 1.8 Sensor Data Normalization
 
