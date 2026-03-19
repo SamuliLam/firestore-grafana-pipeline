@@ -299,7 +299,7 @@ For production environments at **envidata.metropolia.fi**, the project uses a ce
 
 ## 6.4 Environment Configuration (.env)
 
-The system requires specific environment variables to function. These must be defined in a `.env` file at the root of the respective service or the deployment repository.
+The system requires specific environment variables to function. These must be defined in a `.env` file at the root of the respective service or the deployment repository. In addition, make sure that your /docker/secrets directory contains the GCP service account key file named 'normalizer-sa.json' for the backend to access Firestore.
 
 ### 6.4.1 Authentication (Auth0)
 These variables enable secure login and role-based access control via Auth0:
@@ -333,3 +333,6 @@ docker-compose up -d
 cd frontend
 npm install
 npm run dev
+```
+### Production Deployment
+Refer to the `envidata-deployment` repository for detailed deployment instructions.
