@@ -1,5 +1,5 @@
 ## Introduction
- This document outlines the testing procedures and results for the IoT sensor data ingestion and visualization system. The testing process aimed to ensure that all functional and non-functional requirements were met, and that the system operates reliably under various conditions.
+**(IGNORE THIS SECTION: TESTS ARE OUTDATED, ONLY test_Sensor_data_parser.py is up-to-date)**
 
 ## Table of Contents
 1. [Test target and achievements](#test-target-and-achievements)
