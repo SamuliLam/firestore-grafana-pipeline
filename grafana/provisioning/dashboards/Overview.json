@@ -2,21 +2,21 @@
   "apiVersion": "dashboard.grafana.app/v2",
   "kind": "Dashboard",
   "metadata": {
-    "name": "adjzvtg",
+    "name": "adqq84b",
     "namespace": "default",
-    "uid": "702e9ff0-1308-4a0b-ad5a-cd4464dda378",
-    "resourceVersion": "1779352453739990",
+    "uid": "fc28f5ec-ba3b-470d-983f-8f74b1f4700f",
+    "resourceVersion": "1779359680498981",
     "generation": 2,
-    "creationTimestamp": "2026-05-21T08:17:51Z",
+    "creationTimestamp": "2026-05-21T10:33:53Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "3733880292249600"
+      "grafana.app/deprecatedInternalID": "3768096314662912"
     },
     "annotations": {
-      "grafana.app/createdBy": "user:bfmpq3tihrs3kd",
+      "grafana.app/createdBy": "user:efmpsp10nrj0gc",
       "grafana.app/folder": "",
       "grafana.app/saved-from-ui": "Grafana v13.0.1+security-01 (9bbe672d)",
-      "grafana.app/updatedBy": "user:bfmpq3tihrs3kd",
-      "grafana.app/updatedTimestamp": "2026-05-21T08:34:13Z"
+      "grafana.app/updatedBy": "user:efmpsp10nrj0gc",
+      "grafana.app/updatedTimestamp": "2026-05-21T10:34:40Z"
     }
   },
   "spec": {
@@ -659,12 +659,159 @@
             }
           }
         }
+      },
+      "panel-5": {
+        "kind": "Panel",
+        "spec": {
+          "id": 5,
+          "title": "Health",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "grafana-postgresql-datasource",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "P40AE60E18F02DE32"
+                      },
+                      "spec": {
+                        "dataset": "sensor_data",
+                        "editorMode": "code",
+                        "format": "table",
+                        "rawQuery": true,
+                        "rawSql": "SELECT\r\n  sensor_id AS \"Sensor\",\r\n  max(\"timestamp\") AS \"Last Reading\",\r\n  (extract(epoch from now()) - extract(epoch from max(\"timestamp\")))::int / 3600 AS \"Hours Ago\"\r\nFROM sensor_data\r\nWHERE\r\n  project_id = '$project'\r\n  AND sensor_id IN (${sensor:sqlstring})\r\nGROUP BY sensor_id\r\nORDER BY \"Hours Ago\" DESC;",
+                        "sql": {
+                          "columns": [
+                            {
+                              "parameters": [],
+                              "type": "function"
+                            }
+                          ],
+                          "groupBy": [
+                            {
+                              "property": {
+                                "type": "string"
+                              },
+                              "type": "groupBy"
+                            }
+                          ],
+                          "limit": 50
+                        }
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.0.1+security-01",
+            "spec": {
+              "options": {
+                "cellHeight": "sm",
+                "showHeader": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 24,
+                        "color": "#EAB839"
+                      },
+                      {
+                        "value": 48,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "custom": {
+                    "align": "auto",
+                    "cellOptions": {
+                      "type": "auto"
+                    },
+                    "footer": {
+                      "reducers": []
+                    },
+                    "inspect": false
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "scope": "series",
+                      "options": "Hours Ago"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.cellOptions",
+                        "value": {
+                          "applyToRow": true,
+                          "mode": "basic",
+                          "type": "color-background"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
       }
     },
     "layout": {
       "kind": "RowsLayout",
       "spec": {
         "rows": [
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "Health",
+              "collapse": false,
+              "layout": {
+                "kind": "AutoGridLayout",
+                "spec": {
+                  "maxColumnCount": 3,
+                  "columnWidthMode": "standard",
+                  "rowHeightMode": "standard",
+                  "items": [
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-5"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
           {
             "kind": "RowsLayoutRow",
             "spec": {
@@ -821,7 +968,9 @@
         "spec": {
           "name": "metric",
           "current": {
-            "text": "All",
+            "text": [
+              "All"
+            ],
             "value": [
               "$__all"
             ]
@@ -853,7 +1002,9 @@
         "spec": {
           "name": "sensor",
           "current": {
-            "text": "All",
+            "text": [
+              "All"
+            ],
             "value": [
               "$__all"
             ]
