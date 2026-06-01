@@ -14,7 +14,13 @@ class SensorDataParser:
         self.tz_utc = ZoneInfo("UTC")
         self.id_fields = set(POSSIBLE_SENSOR_ID_FIELDS)
         self.ts_fields = set(POSSIBLE_TIMESTAMP_FIELDS)
-        self.ignored_fields = self.id_fields | self.ts_fields | {"project_id"}
+        self.ignored_fields = self.id_fields | self.ts_fields | {
+            "project_id", 
+            "extra", 
+            "backfilled", 
+            "original_received_at", 
+            "measurements"
+        }
         self.cached_id_field = None
         self.cached_ts_field = None
 
@@ -33,12 +39,10 @@ class SensorDataParser:
     def _convert_to_normalized_format(self, sensor_reading: dict, sensor_id: str | None) -> List[dict]:
         rows = []
 
-        actual_measurements = sensor_reading.get("measurements", {})
-
-        if not actual_measurements:
-            metrics = {k: v for k, v in sensor_reading.items() if k not in self.ignored_fields}
+        if "measurements" in sensor_reading:
+            metrics = sensor_reading.get("measurements") or {}
         else:
-            metrics = {**actual_measurements}
+            metrics = {k: v for k, v in sensor_reading.items() if k not in self.ignored_fields}
 
         if not metrics:
             return []
