@@ -894,7 +894,7 @@
                   "color": {
                     "mode": "thresholds"
                   },
-                  "noValue": "No rows for this period",
+                  "noValue": "No data",
                   "custom": {
                     "align": "auto",
                     "cellOptions": {
