@@ -2,21 +2,21 @@
   "apiVersion": "dashboard.grafana.app/v2",
   "kind": "Dashboard",
   "metadata": {
-    "name": "adqq84b",
+    "name": "ad727s4",
     "namespace": "default",
-    "uid": "fc28f5ec-ba3b-470d-983f-8f74b1f4700f",
-    "resourceVersion": "1779359680498981",
+    "uid": "164a4ec5-2fb8-4db5-93a0-a54e66f8fb8c",
+    "resourceVersion": "1780321204447013",
     "generation": 2,
-    "creationTimestamp": "2026-05-21T10:33:53Z",
+    "creationTimestamp": "2026-06-01T13:39:51Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "3768096314662912"
+      "grafana.app/deprecatedInternalID": "3297584862265344"
     },
     "annotations": {
-      "grafana.app/createdBy": "user:efmpsp10nrj0gc",
+      "grafana.app/createdBy": "user:ffnts28z15gjkf",
       "grafana.app/folder": "",
       "grafana.app/saved-from-ui": "Grafana v13.0.1+security-01 (9bbe672d)",
-      "grafana.app/updatedBy": "user:efmpsp10nrj0gc",
-      "grafana.app/updatedTimestamp": "2026-05-21T10:34:40Z"
+      "grafana.app/updatedBy": "user:ffnts28z15gjkf",
+      "grafana.app/updatedTimestamp": "2026-06-01T13:40:04Z"
     }
   },
   "spec": {
@@ -139,6 +139,7 @@
                   "color": {
                     "mode": "palette-classic"
                   },
+                  "noValue": "No data recorded for this period",
                   "custom": {
                     "axisBorderShow": false,
                     "axisCenteredZero": false,
@@ -409,6 +410,7 @@
                   "color": {
                     "mode": "palette-classic"
                   },
+                  "noValue": "No data recorded for this period",
                   "custom": {
                     "axisBorderShow": false,
                     "axisCenteredZero": false,
@@ -573,7 +575,7 @@
                         "editorMode": "code",
                         "format": "table",
                         "rawQuery": true,
-                        "rawSql": "SELECT\r\n  \"timestamp\" AS time,\r\n  CAST(NULLIF(metric_value, '') AS FLOAT) AS \"$metric\"\r\nFROM sensor_data\r\nWHERE\r\n  project_id = '$project'\r\n  AND sensor_id IN (${sensor:sqlstring})\r\n  AND metric_name = '$metric'\r\n  AND $__timeFilter(\"timestamp\")\r\nORDER BY time;",
+                        "rawSql": "SELECT\r\n  \"timestamp\" AS time,\r\n  CAST(NULLIF(metric_value, '') AS FLOAT) AS \"value\"\r\nFROM sensor_data\r\nWHERE\r\n  project_id = '$project'\r\n  AND sensor_id IN (${sensor:sqlstring})\r\n  AND metric_name = '$metric'\r\n  AND $__timeFilter(\"timestamp\")\r\nORDER BY time;",
                         "sql": {
                           "columns": [
                             {
@@ -641,6 +643,7 @@
               },
               "fieldConfig": {
                 "defaults": {
+                  "displayName": "$metric",
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -652,7 +655,8 @@
                   },
                   "color": {
                     "mode": "thresholds"
-                  }
+                  },
+                  "noValue": "No data recorded for this period"
                 },
                 "overrides": []
               }
@@ -686,7 +690,7 @@
                         "editorMode": "code",
                         "format": "table",
                         "rawQuery": true,
-                        "rawSql": "SELECT\r\n  sensor_id AS \"Sensor\",\r\n  max(\"timestamp\") AS \"Last Reading\",\r\n  (extract(epoch from now()) - extract(epoch from max(\"timestamp\")))::int / 3600 AS \"Hours Ago\"\r\nFROM sensor_data\r\nWHERE\r\n  project_id = '$project'\r\n  AND sensor_id IN (${sensor:sqlstring})\r\nGROUP BY sensor_id\r\nORDER BY \"Hours Ago\" DESC;",
+                        "rawSql": "SELECT\r\n  sensor_id AS \"Sensor\",\r\n  max(\"timestamp\") AS \"Last Activity\",\r\n  (extract(epoch from now()) - extract(epoch from max(\"timestamp\")))::int / 3600 AS \"Hours Ago\"\r\nFROM sensor_data\r\nWHERE\r\n  project_id = '$project'\r\n  AND sensor_id IN (${sensor:sqlstring})\r\nGROUP BY sensor_id\r\nORDER BY \"Hours Ago\" DESC;",
                         "sql": {
                           "columns": [
                             {
@@ -722,7 +726,8 @@
             "spec": {
               "options": {
                 "cellHeight": "sm",
-                "showHeader": true
+                "showHeader": true,
+                "sortBy": []
               },
               "fieldConfig": {
                 "defaults": {
@@ -772,6 +777,145 @@
                           "mode": "basic",
                           "type": "color-background"
                         }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-6": {
+        "kind": "Panel",
+        "spec": {
+          "id": 6,
+          "title": "Extra data",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "grafana-postgresql-datasource",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "P40AE60E18F02DE32"
+                      },
+                      "spec": {
+                        "dataset": "sensor_data",
+                        "editorMode": "code",
+                        "format": "table",
+                        "rawQuery": true,
+                        "rawSql": "   SELECT\r\n     \"timestamp\" AS \"time\",\r\n     sensor_id,\r\n     metric_value AS \"metadata\"\r\n   FROM sensor_data\r\n   WHERE\r\n     project_id = '$project'\r\n     AND metric_name = 'extra_data'\r\n     AND sensor_id IN (${sensor:sqlstring})\r\n     AND $__timeFilter(\"timestamp\")\r\n   ORDER BY time DESC;\r\n   ",
+                        "sql": {
+                          "columns": [
+                            {
+                              "parameters": [],
+                              "type": "function"
+                            }
+                          ],
+                          "groupBy": [
+                            {
+                              "property": {
+                                "type": "string"
+                              },
+                              "type": "groupBy"
+                            }
+                          ],
+                          "limit": 50
+                        }
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [
+                {
+                  "kind": "Transformation",
+                  "group": "extractFields",
+                  "spec": {
+                    "options": {
+                      "delimiter": ",",
+                      "format": "json",
+                      "source": "metadata"
+                    }
+                  }
+                },
+                {
+                  "kind": "Transformation",
+                  "group": "organize",
+                  "spec": {
+                    "options": {
+                      "excludeByName": {
+                        "metadata": true
+                      },
+                      "includeByName": {},
+                      "indexByName": {},
+                      "renameByName": {}
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.0.1+security-01",
+            "spec": {
+              "options": {
+                "cellHeight": "sm",
+                "showHeader": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 80,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "No rows for this period",
+                  "custom": {
+                    "align": "auto",
+                    "cellOptions": {
+                      "type": "auto"
+                    },
+                    "footer": {
+                      "reducers": []
+                    },
+                    "inspect": false
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "metadata"
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.width",
+                        "value": 389
                       }
                     ]
                   }
@@ -903,6 +1047,32 @@
                 }
               }
             }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "Extras",
+              "collapse": false,
+              "layout": {
+                "kind": "AutoGridLayout",
+                "spec": {
+                  "maxColumnCount": 3,
+                  "columnWidthMode": "standard",
+                  "rowHeightMode": "standard",
+                  "items": [
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-6"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
         ]
       }
@@ -968,9 +1138,7 @@
         "spec": {
           "name": "metric",
           "current": {
-            "text": [
-              "All"
-            ],
+            "text": "All",
             "value": [
               "$__all"
             ]
@@ -984,13 +1152,35 @@
             "group": "postgres",
             "version": "v0",
             "spec": {
-              "__legacyStringValue": "SELECT DISTINCT metric_name FROM sensor_data \nWHERE project_id = '$project' \nAND sensor_id IN (${sensor:sqlstring});"
+              "editorMode": "code",
+              "format": "table",
+              "query": "SELECT DISTINCT metric_name \nFROM sensor_data \nWHERE project_id = '$project' \n  AND sensor_id IN (${sensor:sqlstring})\n  AND metric_name != 'extra_data';",
+              "rawQuery": true,
+              "rawSql": "SELECT DISTINCT metric_name \nFROM sensor_data \nWHERE project_id = '$project' \n  AND sensor_id IN (${sensor:sqlstring})\n  AND metric_name != 'extra_data';",
+              "refId": "SQLVariableQueryEditor-VariableQuery",
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              }
             }
           },
           "regex": "",
           "regexApplyTo": "value",
           "sort": "disabled",
-          "definition": "SELECT DISTINCT metric_name FROM sensor_data \nWHERE project_id = '$project' \nAND sensor_id IN (${sensor:sqlstring});",
+          "definition": "SELECT DISTINCT metric_name \nFROM sensor_data \nWHERE project_id = '$project' \n  AND sensor_id IN (${sensor:sqlstring})\n  AND metric_name != 'extra_data';",
           "options": [],
           "multi": true,
           "includeAll": true,
@@ -1002,9 +1192,7 @@
         "spec": {
           "name": "sensor",
           "current": {
-            "text": [
-              "All"
-            ],
+            "text": "All",
             "value": [
               "$__all"
             ]
@@ -1036,8 +1224,8 @@
         "spec": {
           "name": "metric_A",
           "current": {
-            "text": "humidity",
-            "value": "humidity"
+            "text": "temperature",
+            "value": "temperature"
           },
           "label": "Comparison variable 1",
           "hide": "dontHide",
@@ -1048,13 +1236,35 @@
             "group": "postgres",
             "version": "v0",
             "spec": {
-              "__legacyStringValue": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project';"
+              "editorMode": "code",
+              "format": "table",
+              "query": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project' AND metric_name != 'extra_data';",
+              "rawQuery": true,
+              "rawSql": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project' AND metric_name != 'extra_data';",
+              "refId": "SQLVariableQueryEditor-VariableQuery",
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              }
             }
           },
           "regex": "",
           "regexApplyTo": "value",
           "sort": "disabled",
-          "definition": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project';",
+          "definition": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project' AND metric_name != 'extra_data';",
           "options": [],
           "multi": false,
           "includeAll": false,
@@ -1066,8 +1276,8 @@
         "spec": {
           "name": "metric_B",
           "current": {
-            "text": "humidity",
-            "value": "humidity"
+            "text": "temperature",
+            "value": "temperature"
           },
           "label": "Comparison variable 2",
           "hide": "dontHide",
@@ -1078,13 +1288,35 @@
             "group": "postgres",
             "version": "v0",
             "spec": {
-              "__legacyStringValue": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project';"
+              "editorMode": "code",
+              "format": "table",
+              "query": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project' AND metric_name != 'extra_data';;",
+              "rawQuery": true,
+              "rawSql": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project' AND metric_name != 'extra_data';;",
+              "refId": "SQLVariableQueryEditor-VariableQuery",
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              }
             }
           },
           "regex": "",
           "regexApplyTo": "value",
           "sort": "disabled",
-          "definition": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project';",
+          "definition": "SELECT DISTINCT metric_name FROM sensor_data WHERE project_id = '$project' AND metric_name != 'extra_data';;",
           "options": [],
           "multi": false,
           "includeAll": false,

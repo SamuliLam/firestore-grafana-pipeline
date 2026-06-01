@@ -1,4 +1,5 @@
 import datetime
+import json
 from typing import List, Optional
 from zoneinfo import ZoneInfo
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
@@ -44,13 +45,27 @@ class SensorDataParser:
         else:
             metrics = {k: v for k, v in sensor_reading.items() if k not in self.ignored_fields}
 
-        if not metrics:
+        extra_data = sensor_reading.get("extra")
+
+        if not metrics and not extra_data:
             return []
 
         base_time = self._parse_timestamp(sensor_reading)
 
         for metric_name, metric_value in metrics.items():
             row = self._create_sensor_row(metric_name, metric_value, sensor_id, self.project_id, base_time)
+            if row:
+                rows.append(row)
+
+        if extra_data and isinstance(extra_data, dict):
+            # Safely serialize Firestore objects like DatetimeWithNanoseconds
+            def safe_serialize(obj):
+                if isinstance(obj, (datetime.datetime, datetime.date)):
+                    return obj.isoformat()
+                return str(obj)
+
+            json_extra = json.dumps(extra_data, default=safe_serialize)
+            row = self._create_sensor_row("extra_data", json_extra, sensor_id, self.project_id, base_time)
             if row:
                 rows.append(row)
 
