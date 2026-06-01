@@ -894,7 +894,7 @@
                   "color": {
                     "mode": "thresholds"
                   },
-                  "noValue": "No data",
+                  "noValue": "-",
                   "custom": {
                     "align": "auto",
                     "cellOptions": {
