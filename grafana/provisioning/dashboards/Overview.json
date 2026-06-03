@@ -643,7 +643,6 @@
               },
               "fieldConfig": {
                 "defaults": {
-                  "displayName": "$metric",
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
