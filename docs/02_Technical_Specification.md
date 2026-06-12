@@ -231,6 +231,25 @@ The `SensorDataParser` class is used by the Backend to normalize data fetched fr
 }
 ```
 
+### 3.4 Known Limitation — Incremental Sync Windowing Gap
+
+> **KNOWN ISSUE (not yet fixed)**
+
+The incremental sync in `history_to_timescale.py` (`sync_firestore_to_timescale`) decides what to fetch from Firestore using a **single project-wide high-water mark**:
+
+- New records: `timestamp > newest_ts`, where `newest_ts = max(timestamp)` across **all** sensors in the project.
+- Old history: `timestamp < oldest_ts`, where `oldest_ts = min(timestamp)` across all sensors in the project.
+
+Because `newest_ts` is one value for the entire project, it is set by the most-recently-reporting sensor. Any **slower-reporting or backdated** sensor whose new readings land *between* `oldest_ts` and `newest_ts` is skipped by **both** queries and is lost permanently.
+
+**Example:** Sensor A's latest reading is `12:00:00`, so `newest_ts = 12:00:00`. Sensor B's latest is `11:30:00`. On the next run, Sensor B produces readings at `11:45` and `12:00`. The new-records query (`timestamp > 12:00:00`) skips them, and the history query (`timestamp < oldest_ts`) skips them too — they are dropped on every run.
+
+This manifests as "a sensor has far fewer rows in TimescaleDB than in Firestore," most visible on sensors that report less frequently than the project's busiest sensor. The same failure affects late-arriving/buffered uploads (a sensor that was offline and later flushes older readings).
+
+**Note:** A full sync against an *empty* table is unaffected, because with no rows `newest_ts`/`oldest_ts` are both `None`, the filters are skipped, and every reading is fetched. The gap only appears on incremental runs against an already-populated table.
+
+**Intended fix (not implemented):** Track the high-water mark **per `(project_id, sensor_id)`** and fetch `timestamp > that_sensor's_max`, so each sensor's history is contiguous from its own maximum forward. Because `insert_sensor_rows` is already an idempotent upsert (`ON CONFLICT (timestamp, sensor_id, metric_name) DO NOTHING`), a wider re-fetch is safe — overlapping rows are silently skipped rather than duplicated.
+
 # 4. Frontend Application
 
 The frontend is a React-based single-page application (SPA) hosted at `envidata.metropolia.fi`. It serves as the primary interface for environmental data monitoring and administrative sensor management.

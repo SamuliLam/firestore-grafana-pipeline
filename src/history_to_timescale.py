@@ -57,8 +57,6 @@ def sync_firestore_to_timescale():
             parser = SensorDataParser(pid)
 
             query_base = client.collection_group("readings").where(filter=FieldFilter("project_id", "==", pid))
-            all_docs = list(query_base.stream())
-            print(f"DEBUG: Collection group found {len(all_docs)} docs total for project {pid}")
 
             new_query = query_base
             if newest_ts:

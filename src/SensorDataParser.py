@@ -16,23 +16,20 @@ class SensorDataParser:
         self.id_fields = set(POSSIBLE_SENSOR_ID_FIELDS)
         self.ts_fields = set(POSSIBLE_TIMESTAMP_FIELDS)
         self.ignored_fields = self.id_fields | self.ts_fields | {
-            "project_id", 
-            "extra", 
-            "backfilled", 
-            "original_received_at", 
+            "project_id",
+            "extra",
+            "backfilled",
+            "original_received_at",
             "measurements"
         }
-        self.cached_id_field = None
-        self.cached_ts_field = None
 
     def process_raw_sensor_data(self, raw_data: dict) -> List[dict]:
         if not raw_data:
             return []
 
-        if not self.cached_id_field:
-            self.cached_id_field = _find_field_name(raw_data, self.id_fields)
+        id_field = _find_field_name(raw_data, self.id_fields)
 
-        raw_id_val = raw_data.get(self.cached_id_field) if self.cached_id_field else None
+        raw_id_val = raw_data.get(id_field) if id_field else None
         sensor_id = str(raw_id_val).replace(":", "") if raw_id_val else None
 
         return self._convert_to_normalized_format(raw_data, sensor_id)
@@ -72,10 +69,9 @@ class SensorDataParser:
         return rows
 
     def _parse_timestamp(self, item: dict) -> datetime.datetime:
-        if not self.cached_ts_field:
-            self.cached_ts_field = _find_field_name(item, self.ts_fields)
+        ts_field = _find_field_name(item, self.ts_fields)
 
-        val = item.get(self.cached_ts_field) if self.cached_ts_field else None
+        val = item.get(ts_field) if ts_field else None
 
         if isinstance(val, datetime.datetime):
             if val.tzinfo:
